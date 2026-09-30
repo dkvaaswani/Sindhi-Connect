@@ -30,7 +30,7 @@
       <nav class="site-nav" aria-label="Main">
         <ul>
           <li><a href="#about">About</a></li>
-          <li><a href="#study">Study</a></li>
+          <li><a href="#knowledge-hub">Knowledge Hub</a></li>
           <li><a href="#videos">Videos</a></li>
           <li><a href="#contact">Contact</a></li>
           <li><a href="#join" class="btn btn-primary btn-sm">Join free</a></li>
@@ -48,7 +48,7 @@
           <h1>Keep the Sindhi language and culture alive, together.</h1>
           <p class="hero-sub">Learn Sindhi, discover our heritage, and connect with Sindhis around the world — all in one place.</p>
           <div class="hero-actions">
-            <a href="#study" class="btn btn-primary">Start learning</a>
+            <a href="#knowledge-hub" class="btn btn-primary">Explore Knowledge Hub</a>
             <a href="#about" class="btn btn-ghost">About the project</a>
           </div>
         </div>
@@ -68,8 +68,8 @@
             <dd>2</dd>
           </div>
           <div class="stat">
-            <dt>Learning levels</dt>
-            <dd>3</dd>
+            <dt>Knowledge categories</dt>
+            <dd>6</dd>
           </div>
           <div class="stat">
             <dt>Cost to join</dt>
@@ -169,48 +169,47 @@
       </div>
     </section>
 
-    <!-- 4. Study -->
-    <section id="study" class="section section-paper">
+    <!-- 4. Knowledge Hub (cards are built by app.js from resources.js) -->
+    <section id="knowledge-hub" class="section section-paper knowledge" aria-labelledby="kh-title">
       <div class="container">
-        <header class="section-head">
-          <p class="eyebrow">Study</p>
-          <h2>A clear path from first letter to fluency.</h2>
+        <header class="section-head kh-head" data-reveal>
+          <p class="kh-script" lang="sd" dir="rtl">ڄاڻ، ورثو، سڃاڻپ</p>
+          <p class="eyebrow">Knowledge Hub</p>
+          <h2 id="kh-title">Discover books, stories, history, culture and useful knowledge — all in one place.</h2>
+          <p class="lead">Sindhi Connect is not only a community platform — it is also a place to discover, preserve and share knowledge.</p>
+          <p class="kh-pillars">Explore <span aria-hidden="true">•</span> Learn <span aria-hidden="true">•</span> Discover <span aria-hidden="true">•</span> Preserve</p>
         </header>
-        <ol class="path">
-          <li class="course">
-            <span class="course-step" aria-hidden="true">01</span>
-            <span class="badge">Beginner</span>
-            <h3>Alphabet &amp; Sounds</h3>
-            <p>Learn the 52 letters of the Sindhi alphabet and how to pronounce each one.</p>
-            <ul class="course-meta">
-              <li>12 lessons</li>
-              <li>~3 hours</li>
-            </ul>
-            <a href="#join" class="text-link">Start course <span aria-hidden="true">→</span></a>
-          </li>
-          <li class="course">
-            <span class="course-step" aria-hidden="true">02</span>
-            <span class="badge">Intermediate</span>
-            <h3>Everyday Conversation</h3>
-            <p>Greetings, family, food, and shopping — the phrases you'll use every day.</p>
-            <ul class="course-meta">
-              <li>20 lessons</li>
-              <li>~6 hours</li>
-            </ul>
-            <a href="#join" class="text-link">Start course <span aria-hidden="true">→</span></a>
-          </li>
-          <li class="course">
-            <span class="course-step" aria-hidden="true">03</span>
-            <span class="badge">Advanced</span>
-            <h3>Poetry &amp; Literature</h3>
-            <p>Read Shah Abdul Latif Bhittai and Sachal Sarmast in the original Sindhi.</p>
-            <ul class="course-meta">
-              <li>15 lessons</li>
-              <li>~8 hours</li>
-            </ul>
-            <a href="#join" class="text-link">Start course <span aria-hidden="true">→</span></a>
-          </li>
-        </ol>
+
+        <ul class="kh-cats" aria-label="Browse by category" data-reveal></ul>
+
+        <div class="kh-library" id="kh-library">
+          <div class="kh-library-head">
+            <h3>Knowledge Library</h3>
+            <p class="kh-count" aria-live="polite"></p>
+          </div>
+
+          <div class="kh-toolbar">
+            <div class="kh-search">
+              <label for="kh-search" class="sr-only">Search Knowledge Hub</label>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="kh-search" type="search" placeholder="Search Knowledge Hub..." autocomplete="off">
+            </div>
+            <div class="kh-sort">
+              <label for="kh-sort">Sort by</label>
+              <select id="kh-sort">
+                <option value="featured">Featured</option>
+                <option value="newest">Newest</option>
+                <option value="category">Category</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="kh-chips" role="group" aria-label="Filter by category"></div>
+
+          <ul class="kh-grid"></ul>
+          <div class="kh-empty" hidden></div>
+          <noscript><p class="kh-noscript">Please turn on JavaScript to browse the Knowledge Library.</p></noscript>
+        </div>
       </div>
     </section>
 
@@ -271,7 +270,7 @@
         <div class="forms">
           <div class="panel">
             <h3>Create a free account</h3>
-            <p class="panel-sub">Track your lessons and connect with other learners.</p>
+            <p class="panel-sub">Hear about new resources and connect with the community.</p>
             <form class="form" action="#" method="post">
               <div class="field">
                 <label for="join-name">Full name <span class="req" aria-hidden="true">*</span></label>
@@ -330,7 +329,7 @@
       <nav aria-label="Footer">
         <ul class="footer-links">
           <li><a href="#about">About</a></li>
-          <li><a href="#study">Study</a></li>
+          <li><a href="#knowledge-hub">Knowledge Hub</a></li>
           <li><a href="#videos">Videos</a></li>
           <li><a href="#join">Join</a></li>
           <li><a href="#contact">Contact</a></li>
@@ -342,6 +341,7 @@
     </div>
   </footer>
 
+  <script src="resources.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

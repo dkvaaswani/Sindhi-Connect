@@ -28,7 +28,8 @@ No gradients. Borders (1px `--line`) over shadows.
 ## Components
 - **Buttons:** `.btn` + `.btn-primary` (gold) / `.btn-secondary` (ink) / `.btn-ghost` (on dark); `.btn-sm`, `.btn-block`. Min height 48px (40px small).
 - **Section header:** `.eyebrow` label + `h2`.
-- **Cards:** `.course`, `.video`, `.panel` — white, 1px border, 12px radius.
+- **Cards:** `.kh-cat`, `.kh-card`, `.video`, `.panel` — white, 1px border, 12px radius.
+- **Knowledge Hub:** content lives in `frontend/resources.js`; `app.js` builds the cards. Covers without a thumbnail use the ajrak-inspired `--kh-motif` pattern on a per-category tone.
 - **KPI strip:** `.stats` with `<dt>` label / `<dd>` value.
 - **Form field:** `.field` > `label` + input; required marked with `.req`.
 
