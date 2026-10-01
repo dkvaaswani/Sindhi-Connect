@@ -171,6 +171,19 @@ a { color: inherit; }
 }
 .site-nav a:not(.btn):hover { color: var(--white); }
 
+/* current page in the menus */
+.site-nav a[aria-current="page"]:not(.btn) { color: var(--white); box-shadow: 0 2px 0 var(--gold); }
+.footer-links a[aria-current="page"] { color: var(--white); }
+
+/* Pages (app.js shows one at a time) */
+main [data-page][hidden] { display: none; }
+main [data-page]:focus { outline: none; }
+.page-enter { animation: page-enter .35s ease both; }
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
 /* CSS-only mobile menu toggle */
 .nav-toggle { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .nav-toggle-label { display: none; }
@@ -806,6 +819,7 @@ a { color: inherit; }
   .site-nav ul { flex-direction: column; align-items: stretch; gap: 0; padding: var(--s-2) var(--s-4) var(--s-5); }
   .site-nav a:not(.btn) { display: block; padding: var(--s-4) 0; border-bottom: 1px solid var(--ink-line); font-size: var(--fs-base); }
   .site-nav .btn { display: flex; margin-top: var(--s-4); min-height: 48px; }
+  .site-nav a[aria-current="page"]:not(.btn) { box-shadow: none; color: var(--gold); }
 
   .hero { padding: var(--s-6) 0 var(--s-7); }
   .hero-inner { grid-template-columns: 1fr; gap: var(--s-4); }
@@ -845,6 +859,7 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; }
+  .page-enter { animation: none; }
 }
 
 /* =========================================================

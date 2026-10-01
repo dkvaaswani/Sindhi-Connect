@@ -20,6 +20,88 @@
 })();
 
 /* =========================================================
+   Pages — the menu shows one page at a time instead of
+   scrolling down the whole site. Sections are grouped by
+   their data-page attribute; the URL hash picks the page,
+   so links, bookmarks and the back button all work.
+   Without JS every section simply shows on one long page.
+   ========================================================= */
+(function () {
+  'use strict';
+
+  const sections = Array.from(document.querySelectorAll('main [data-page]'));
+  if (!sections.length) return;
+
+  const TITLES = {
+    about: 'About',
+    'knowledge-hub': 'Knowledge Hub',
+    videos: 'Videos',
+    join: 'Join & Contact'
+  };
+  const SITE = 'Sindhi Connect';
+  const instant = { behavior: 'instant' };
+  let current = null;
+
+  function targetOf(hash) {
+    const id = decodeURIComponent((hash || '').slice(1));
+    return id ? document.getElementById(id) : null;
+  }
+
+  // The page a hash belongs to; null means "not a page link" (e.g. the skip link)
+  function pageOf(hash) {
+    const target = targetOf(hash);
+    if (!target) return 'home';
+    const owner = target.closest('[data-page]');
+    return owner ? owner.dataset.page : null;
+  }
+
+  function markNav(page) {
+    document.querySelectorAll('.site-nav a, .footer-links a').forEach((link) => {
+      if (pageOf(link.hash) === page) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+  }
+
+  function show(hash) {
+    const page = pageOf(hash);
+    if (!page) return;
+    const target = targetOf(hash);
+    const first = sections.find((s) => s.dataset.page === page);
+
+    if (page !== current) {
+      current = page;
+      sections.forEach((s) => {
+        s.hidden = s.dataset.page !== page;
+        s.classList.remove('page-enter');
+      });
+      void first.offsetWidth; // restart the fade-in
+      sections.forEach((s) => { if (!s.hidden) s.classList.add('page-enter'); });
+      document.title = TITLES[page] ? TITLES[page] + ' — ' + SITE : SITE;
+      markNav(page);
+      // move screen-reader focus to the new page without scrolling
+      first.setAttribute('tabindex', '-1');
+      first.focus({ preventScroll: true });
+    }
+
+    // Page links start at the top; links to a part of a page (e.g. #contact) go there
+    if (!target || target === first) window.scrollTo({ top: 0, ...instant });
+    else target.scrollIntoView(instant);
+  }
+
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('a[href^="#"]');
+    if (!link || event.defaultPrevented || !pageOf(link.hash)) return;
+    event.preventDefault();
+    if (link.hash !== location.hash) history.pushState(null, '', link.hash || '#home');
+    show(link.hash);
+  });
+
+  window.addEventListener('popstate', () => show(location.hash));
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  show(location.hash);
+})();
+
+/* =========================================================
    Mobile menu — close it after a link is tapped
    ========================================================= */
 (function () {
