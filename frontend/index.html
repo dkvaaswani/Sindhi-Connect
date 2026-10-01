@@ -6,6 +6,14 @@
   <meta name="description" content="Sindhi Connect — learn the Sindhi language, explore culture, and connect with the Sindhi community worldwide.">
   <meta name="theme-color" content="#0E1016">
   <title>Sindhi Connect</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <!-- Link previews (WhatsApp, Facebook, X). Add og:image / og:url once the domain is live -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Sindhi Connect">
+  <meta property="og:title" content="Sindhi Connect — Celebrating Sindhi Excellence Worldwide">
+  <meta property="og:description" content="Discover Sindhi language, culture, history and knowledge, and connect with Sindhis around the world.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Noto+Naskh+Arabic:wght@500;600&display=swap" rel="stylesheet">
@@ -269,9 +277,11 @@
         </header>
         <div class="forms">
           <div class="panel">
-            <h3>Create a free account</h3>
-            <p class="panel-sub">Hear about new resources and connect with the community.</p>
-            <form class="form" action="#" method="post">
+            <h3>Join our mailing list</h3>
+            <p class="panel-sub">Hear about new resources, videos and community news.</p>
+            <form class="form" name="join" action="/" method="post" data-netlify="true" netlify-honeypot="bot-field">
+              <input type="hidden" name="form-name" value="join">
+              <p class="hp-field"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
               <div class="field">
                 <label for="join-name">Full name <span class="req" aria-hidden="true">*</span></label>
                 <input id="join-name" name="name" type="text" autocomplete="name" required>
@@ -289,14 +299,17 @@
                   <option value="native">Native speaker</option>
                 </select>
               </div>
-              <button type="submit" class="btn btn-primary btn-block">Sign up</button>
+              <button type="submit" class="btn btn-primary btn-block">Subscribe</button>
+              <p class="form-status" role="status"></p>
             </form>
           </div>
 
           <div class="panel" id="contact">
             <h3>Contact us</h3>
             <p class="panel-sub">Questions, ideas, or want to contribute? We'd love to hear from you.</p>
-            <form class="form" action="#" method="post">
+            <form class="form" name="contact" action="/" method="post" data-netlify="true" netlify-honeypot="bot-field">
+              <input type="hidden" name="form-name" value="contact">
+              <p class="hp-field"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
               <div class="field">
                 <label for="contact-name">Name <span class="req" aria-hidden="true">*</span></label>
                 <input id="contact-name" name="name" type="text" autocomplete="name" required>
@@ -310,10 +323,11 @@
                 <textarea id="contact-message" name="message" rows="4" required></textarea>
               </div>
               <button type="submit" class="btn btn-secondary btn-block">Send message</button>
+              <p class="form-status" role="status"></p>
             </form>
           </div>
         </div>
-        <p class="form-note"><span class="req" aria-hidden="true">*</span> Required field</p>
+        <p class="form-note"><span class="req" aria-hidden="true">*</span> Required field. We only use your details to reply to you and send Sindhi Connect updates. We never share them, and you can ask us to remove them at any time.</p>
       </div>
     </section>
   </main>

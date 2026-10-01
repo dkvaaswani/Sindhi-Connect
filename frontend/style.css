@@ -704,6 +704,13 @@ a { color: inherit; }
 .field textarea:focus-visible { border-color: var(--ink); outline-offset: 1px; }
 .field textarea { resize: vertical; min-height: 120px; }
 .form .btn { margin-top: var(--s-2); }
+.form .btn:disabled { opacity: .6; cursor: wait; }
+/* spam trap: hidden from people, filled in by bots */
+.hp-field { position: absolute; left: -9999px; }
+.form-status:empty { display: none; }
+.form-status { padding: var(--s-3) var(--s-4); border-radius: var(--r-sm); font-size: var(--fs-sm); font-weight: 500; }
+.form-status.is-success { background: #e6f4ec; color: #1d5b3a; }
+.form-status.is-error { background: #fbe9ea; color: var(--red); }
 .form-note { margin-top: var(--s-4); font-size: var(--fs-sm); color: var(--muted); }
 
 /* ---------- 8. Footer ---------- */

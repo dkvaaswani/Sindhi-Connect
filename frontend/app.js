@@ -20,6 +20,62 @@
 })();
 
 /* =========================================================
+   Mobile menu — close it after a link is tapped
+   ========================================================= */
+(function () {
+  'use strict';
+
+  const toggle = document.getElementById('nav-toggle');
+  if (!toggle) return;
+  document.querySelectorAll('.site-nav a').forEach((link) => {
+    link.addEventListener('click', () => { toggle.checked = false; });
+  });
+})();
+
+/* =========================================================
+   Forms — submitted to Netlify Forms without leaving the
+   page. Without JS they still post normally.
+   ========================================================= */
+(function () {
+  'use strict';
+
+  const MESSAGES = {
+    join: 'Thank you for joining! We will keep you updated.',
+    contact: 'Thank you for your message. We will get back to you soon.',
+    error: 'Sorry, something went wrong. Please try again in a moment.'
+  };
+
+  document.querySelectorAll('form[data-netlify]').forEach((form) => {
+    const status = form.querySelector('.form-status');
+    const button = form.querySelector('[type="submit"]');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      button.disabled = true;
+      status.className = 'form-status';
+      status.textContent = '';
+
+      try {
+        const response = await fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(new FormData(form)).toString()
+        });
+        if (!response.ok) throw new Error(response.status);
+        form.reset();
+        status.classList.add('is-success');
+        status.textContent = MESSAGES[form.getAttribute('name')];
+      } catch (e) {
+        status.classList.add('is-error');
+        status.textContent = MESSAGES.error;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+})();
+
+/* =========================================================
    Knowledge Hub — builds category cards, filters and
    resource cards from window.SC_KNOWLEDGE (resources.js).
    Add content in resources.js; nothing here needs to change.
