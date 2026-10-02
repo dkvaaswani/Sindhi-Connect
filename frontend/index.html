@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Sindhi Connect — learn the Sindhi language, explore culture, and connect with the Sindhi community worldwide.">
+  <meta name="description" content="Sindhi Connect — connecting Sindhis to knowledge, culture and opportunity: finance, professional learning, Sindhi heritage, inspiring stories, videos and podcasts.">
   <meta name="theme-color" content="#0E1016">
   <title>Sindhi Connect</title>
   <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -11,8 +11,8 @@
   <!-- Link previews (WhatsApp, Facebook, X). Add og:image / og:url once the domain is live -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Sindhi Connect">
-  <meta property="og:title" content="Sindhi Connect — Celebrating Sindhi Excellence Worldwide">
-  <meta property="og:description" content="Discover Sindhi language, culture, history and knowledge, and connect with Sindhis around the world.">
+  <meta property="og:title" content="Sindhi Connect — Connecting Sindhis to Knowledge, Culture &amp; Opportunity">
+  <meta property="og:description" content="Discover ideas, learn practical skills, explore inspiring stories and stay connected with the knowledge and heritage of Sindh.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@
 <body>
   <a href="#main" class="skip-link">Skip to content</a>
 
-  <!-- 1. Header -->
+  <!-- Header -->
   <header class="site-header">
     <div class="container header-inner">
       <a href="#home" class="logo" aria-label="Sindhi Connect home">
@@ -35,108 +35,226 @@
         <span class="sr-only">Menu</span>
       </label>
 
+      <!-- Each dropdown: the label goes to the page, the arrow button opens the menu -->
       <nav class="site-nav" aria-label="Main">
-        <ul>
-          <li><a href="#about">About</a></li>
-          <li><a href="#knowledge-hub">Knowledge Hub</a></li>
-          <li><a href="education-calculator.html">Education Calculator</a></li>
-          <li><a href="#videos">Videos</a></li>
-          <li><a href="#contact">Contact</a></li>
-          <li><a href="#join" class="btn btn-primary btn-sm">Join free</a></li>
+        <ul class="nav-list">
+          <li><a href="#home" class="nav-link">Home</a></li>
+
+          <li class="has-menu">
+            <a href="#about" class="nav-link">About</a>
+            <button type="button" class="submenu-toggle" aria-expanded="false" aria-controls="menu-about">
+              <span class="sr-only">Show About menu</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <ul class="submenu" id="menu-about">
+              <li><a href="#my-story"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>My Story</a></li>
+              <li><a href="#about"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg></span>About Sindhi Connect</a></li>
+              <li><a href="#mission"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>Our Mission &amp; Vision</a></li>
+              <li><a href="#contact"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>Contact</a></li>
+            </ul>
+          </li>
+
+          <li class="has-menu">
+            <a href="#knowledge-hub" class="nav-link">Knowledge Hub</a>
+            <button type="button" class="submenu-toggle" aria-expanded="false" aria-controls="menu-knowledge">
+              <span class="sr-only">Show Knowledge Hub menu</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <ul class="submenu" id="menu-knowledge">
+              <li><a href="education-calculator.html"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg></span>Education Fund Calculator</a></li>
+              <li><a href="#topic-finance"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span>Finance &amp; Money Matters</a></li>
+              <li><a href="#topic-business"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg></span>Business &amp; Professional Knowledge</a></li>
+              <li><a href="#topic-literature"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.2 3.8a6 6 0 0 0-8.5 0L5 10.5V19h8.5l6.7-6.7a6 6 0 0 0 0-8.5Z"/><path d="M16 8 2 22"/><path d="M17.5 15H9"/></svg></span>Language &amp; Literature</a></li>
+              <li><a href="#topic-development"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 12c0-4 3-7 8-7 0 4-3 7-8 7Z"/><path d="M12 14c0-3-2.5-5.5-7-5.5 0 3 2.5 5.5 7 5.5Z"/></svg></span>Personal Development</a></li>
+            </ul>
+          </li>
+
+          <li class="has-menu">
+            <a href="#resources" class="nav-link">Resources</a>
+            <button type="button" class="submenu-toggle" aria-expanded="false" aria-controls="menu-resources">
+              <span class="sr-only">Show Resources menu</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <ul class="submenu" id="menu-resources">
+              <li><a href="#articles"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg></span>Educational Articles</a></li>
+              <li><a href="#books"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/></svg></span>Knowledge Books</a></li>
+              <li><a href="#downloads"><span class="submenu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg></span>Downloadable Resources</a></li>
+            </ul>
+          </li>
+
+          <li><a href="#videos" class="nav-link">Videos &amp; Podcasts</a></li>
+          <li><a href="#join" class="nav-link">Contact Us</a></li>
         </ul>
       </nav>
     </div>
   </header>
 
   <main id="main">
-    <!-- 2. Hero -->
+    <!-- ===================== HOME ===================== -->
     <section id="home" class="hero" data-page="home">
       <div class="container hero-inner">
         <div class="hero-text">
-          <p class="hero-script" lang="sd" dir="rtl">سنڌي ٻولي، سنڌي سڃاڻپ</p>
-          <h1>Keep the Sindhi language and culture alive, together.</h1>
-          <p class="hero-sub">Learn Sindhi, discover our heritage, and connect with Sindhis around the world — all in one place.</p>
+          <p class="hero-tagline">Our Roots. Our Knowledge. Our Future.</p>
+          <h1>Connecting Sindhis to Knowledge, Culture &amp; Opportunity</h1>
+          <p class="hero-sub">Discover ideas, learn practical skills, explore inspiring stories, and stay connected with the knowledge and heritage of Sindh. Sindhi Connect brings learning, culture, finance, and community together in one place.</p>
           <div class="hero-actions">
-            <a href="#knowledge-hub" class="btn btn-primary">Explore Knowledge Hub</a>
-            <a href="#about" class="btn btn-ghost">About the project</a>
+            <a href="#knowledge-hub" class="btn btn-primary">Explore Knowledge</a>
+            <a href="#videos" class="btn btn-ghost">Watch Videos</a>
           </div>
+          <p class="hero-script" lang="sd" dir="rtl">سنڌي ٻولي، سنڌي سڃاڻپ</p>
         </div>
-        <div class="hero-art">
-          <img src="assets/logo.jpg" alt="Sindhi Connect with Dhanesh Kumar — Celebrating Sindhi Excellence Worldwide" class="hero-logo" width="1024" height="1024">
-        </div>
-      </div>
-
-      <div class="container">
-        <dl class="stats">
-          <div class="stat">
-            <dt>Letters in the alphabet</dt>
-            <dd>52</dd>
-          </div>
-          <div class="stat">
-            <dt>Scripts supported</dt>
-            <dd>2</dd>
-          </div>
-          <div class="stat">
-            <dt>Knowledge categories</dt>
-            <dd>6</dd>
-          </div>
-          <div class="stat">
-            <dt>Cost to join</dt>
-            <dd>Free</dd>
-          </div>
-        </dl>
+        <!-- Original banner, shown uncropped: host photo + Sindhi Connect logo -->
+        <figure class="hero-photo">
+          <img src="assets/dhanesh-kumar.webp" alt="Dhanesh Kumar, host of Sindhi Connect, with the Sindhi Connect logo" width="1080" height="720" fetchpriority="high">
+        </figure>
       </div>
     </section>
 
-    <!-- 3. About -->
-    <section id="about" class="section" data-page="about">
-      <div class="container about">
-        <div class="about-intro">
-          <p class="eyebrow">About</p>
-          <h2>A home for Sindhis, wherever they are.</h2>
-          <p class="lead">From Sindh to the global diaspora, Sindhi Connect brings our language, stories, and people together on one platform.</p>
-        </div>
-        <ul class="features">
-          <li class="feature">
-            <span class="feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></svg>
-            </span>
-            <div>
-              <h3>Language</h3>
-              <p>Read, write, and speak Sindhi in both Arabic and Devanagari scripts, at your own pace.</p>
-            </div>
+    <section id="explore" class="section section-paper" data-page="home" aria-labelledby="explore-title">
+      <div class="container">
+        <header class="section-head">
+          <p class="eyebrow">What you'll find</p>
+          <h2 id="explore-title">Knowledge for every stage of life.</h2>
+          <p class="lead">Practical learning, Sindhi heritage and inspiring stories — explained in simple language for students, families and professionals.</p>
+        </header>
+        <ul class="explore-grid">
+          <li class="explore-card" data-reveal>
+            <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span>
+            <h3>Financial Knowledge</h3>
+            <p>Money skills that help individuals and families plan with confidence.</p>
+            <ul class="explore-points">
+              <li>Personal finance and budgeting</li>
+              <li>Saving and investing fundamentals</li>
+              <li>Financial awareness for families</li>
+              <li>Practical business and accounting knowledge</li>
+            </ul>
+            <a href="education-calculator.html" class="explore-tool">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg>
+              Education Fund Calculator
+            </a>
+            <a href="#topic-finance" class="text-link">Explore more <span aria-hidden="true">→</span></a>
           </li>
-          <li class="feature">
-            <span class="feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-            </span>
-            <div>
-              <h3>Culture</h3>
-              <p>Explore Sufi poetry, music, festivals, food, and the traditions that make us who we are.</p>
-            </div>
+          <li class="explore-card" data-reveal>
+            <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.7 10v8M14.3 10v8M19 10v8"/><path d="M3 20.5h18"/></svg></span>
+            <h3>Sindhi Culture &amp; Heritage</h3>
+            <p>The history, people and traditions that shape who we are.</p>
+            <ul class="explore-points">
+              <li>Sindhi history and traditions</li>
+              <li>Inspiring personalities and life stories</li>
+              <li>Sindhi language, literature and heritage</li>
+              <li>Stories that connect younger generations with their roots</li>
+            </ul>
+            <a href="#topic-history" class="text-link">Explore more <span aria-hidden="true">→</span></a>
           </li>
-          <li class="feature">
-            <span class="feature-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18Z"/></svg>
-            </span>
-            <div>
-              <h3>Community</h3>
-              <p>Meet Sindhis near you and across the world. Share stories, events, and opportunities.</p>
-            </div>
+          <li class="explore-card" data-reveal>
+            <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg></span>
+            <h3>Learning &amp; Professional Growth</h3>
+            <p>Clear explanations for students and working professionals.</p>
+            <ul class="explore-points">
+              <li>Career guidance and professional development</li>
+              <li>Business, accounting, audit, tax and advisory concepts</li>
+              <li>Educational explanations in simple language</li>
+              <li>Practical lessons for everyday work</li>
+            </ul>
+            <a href="#topic-business" class="text-link">Explore more <span aria-hidden="true">→</span></a>
+          </li>
+          <li class="explore-card" data-reveal>
+            <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></span>
+            <h3>Stories, Videos &amp; Podcasts</h3>
+            <p>Conversations and stories that inform and inspire.</p>
+            <ul class="explore-points">
+              <li>Educational videos</li>
+              <li>Interviews with professionals and inspiring personalities</li>
+              <li>Community stories and useful discussions</li>
+              <li>Informative content for everyday life</li>
+            </ul>
+            <a href="#videos" class="text-link">Explore more <span aria-hidden="true">→</span></a>
           </li>
         </ul>
       </div>
     </section>
 
-    <!-- Founder: meet the person behind Sindhi Connect -->
-    <section id="founder" class="section founder" data-page="about">
+    <section id="home-featured" class="section" data-page="home" aria-labelledby="home-featured-title">
+      <div class="container">
+        <header class="section-head section-head-split">
+          <div>
+            <p class="eyebrow">From the Knowledge Hub</p>
+            <h2 id="home-featured-title">Featured reading</h2>
+          </div>
+          <a href="#knowledge-hub" class="text-link">View the Knowledge Hub <span aria-hidden="true">→</span></a>
+        </header>
+        <div data-kh-list="featured" data-limit="3">
+          <ul class="kh-grid"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-band" data-page="home" aria-labelledby="cta-title">
+      <div class="container cta-inner">
+        <div>
+          <h2 id="cta-title">Stay connected.</h2>
+          <p>Join the mailing list to hear about new articles, videos and community news.</p>
+        </div>
+        <div class="cta-actions">
+          <a href="#join" class="btn btn-primary">Join the mailing list</a>
+          <a href="#contact" class="btn btn-ghost">Contact us</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ABOUT ===================== -->
+    <section id="about" class="section" data-page="about">
+      <div class="container about">
+        <div class="about-intro">
+          <p class="eyebrow">About Sindhi Connect</p>
+          <h2>Welcome to Sindhi Connect.</h2>
+          <p class="lead">A platform created to share knowledge, celebrate Sindhi heritage, and make useful information accessible to everyone.</p>
+          <p class="about-text">Through educational content, professional insights, cultural stories, videos, and conversations with inspiring people, our goal is to connect communities, encourage learning, and help the next generation stay connected with its roots while preparing for the future.</p>
+        </div>
+        <div>
+          <h3 class="about-why">Why Sindhi Connect?</h3>
+          <ul class="features">
+            <li class="feature">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></svg>
+              </span>
+              <div>
+                <h3>Knowledge made simple</h3>
+                <p>Practical information on finance, business and everyday life, explained in plain language.</p>
+              </div>
+            </li>
+            <li class="feature">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              </span>
+              <div>
+                <h3>Heritage kept alive</h3>
+                <p>Sindhi history, language, literature, traditions and the stories of inspiring personalities.</p>
+              </div>
+            </li>
+            <li class="feature">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18Z"/></svg>
+              </span>
+              <div>
+                <h3>Community connected</h3>
+                <p>Bringing Sindhis together across generations and around the world.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- My Story: the person behind Sindhi Connect -->
+    <section id="my-story" class="section founder" data-page="about">
       <div class="container founder-inner">
         <figure class="founder-photo" data-reveal>
           <img src="assets/dhanesh-kumar.webp" alt="Dhanesh Kumar, founder of Sindhi Connect" width="1080" height="720" loading="lazy">
         </figure>
 
         <div class="founder-text" data-reveal>
-          <p class="eyebrow">Meet the person behind Sindhi Connect</p>
+          <p class="eyebrow">My Story</p>
           <h2>Connecting People. Sharing Knowledge. Celebrating Sindhi Identity.</h2>
 
           <div class="founder-id">
@@ -178,7 +296,38 @@
       </div>
     </section>
 
-    <!-- 4. Knowledge Hub (cards are built by app.js from resources.js) -->
+    <section id="mission" class="section section-paper" data-page="about" aria-labelledby="mission-title">
+      <div class="container">
+        <header class="section-head">
+          <p class="eyebrow">Mission &amp; Vision</p>
+          <h2 id="mission-title">Why we do this.</h2>
+        </header>
+        <div class="mv-grid">
+          <article class="mv-card" data-reveal>
+            <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>
+            <h3>Our Mission</h3>
+            <p>To make useful knowledge simple and accessible — from personal finance and professional skills to Sindhi history, literature and culture — and to share it openly with everyone.</p>
+          </article>
+          <article class="mv-card" data-reveal>
+            <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <h3>Our Vision</h3>
+            <p>A connected Sindhi community where every generation stays close to its roots, learns with confidence, and builds a brighter future together.</p>
+          </article>
+        </div>
+
+        <h3 class="discover-title">What visitors can discover</h3>
+        <ul class="discover-grid">
+          <li><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span>Financial knowledge for individuals and families</li>
+          <li><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg></span>Business and professional learning</li>
+          <li><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.7 10v8M14.3 10v8M19 10v8"/><path d="M3 20.5h18"/></svg></span>Sindhi history and heritage</li>
+          <li><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.2 3.8a6 6 0 0 0-8.5 0L5 10.5V19h8.5l6.7-6.7a6 6 0 0 0 0-8.5Z"/><path d="M16 8 2 22"/><path d="M17.5 15H9"/></svg></span>Language, literature and poetry</li>
+          <li><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>Inspiring personalities and life stories</li>
+          <li><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.5 3.5-5.5 3.5Z"/></svg></span>Videos, podcasts and conversations</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===================== KNOWLEDGE HUB (built by app.js from resources.js) ===================== -->
     <section id="knowledge-hub" class="section section-paper knowledge" data-page="knowledge-hub" aria-labelledby="kh-title">
       <div class="container">
         <header class="section-head kh-head" data-reveal>
@@ -189,7 +338,21 @@
           <p class="kh-pillars">Explore <span aria-hidden="true">•</span> Learn <span aria-hidden="true">•</span> Discover <span aria-hidden="true">•</span> Preserve</p>
         </header>
 
-        <ul class="kh-cats" aria-label="Browse by category" data-reveal></ul>
+        <!-- Planning tool (separate page: education-calculator.html) -->
+        <a href="education-calculator.html" class="tool-banner">
+          <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg></span>
+          <span class="tool-banner-text">
+            <span class="tool-banner-label">Free planning tool</span>
+            <span class="tool-banner-title">Children's Future Education Fund Calculator</span>
+            <span class="tool-banner-desc">Estimate future university costs for up to four children and how much to save each month. Excel version included.</span>
+          </span>
+          <span class="tool-banner-cta">Open calculator <span aria-hidden="true">→</span></span>
+        </a>
+
+        <div class="kh-spotlight"></div>
+
+        <h3 class="kh-subtitle">Browse by topic</h3>
+        <ul class="kh-cats" aria-label="Browse by topic" data-reveal></ul>
 
         <div class="kh-library" id="kh-library">
           <div class="kh-library-head">
@@ -213,7 +376,7 @@
             </div>
           </div>
 
-          <div class="kh-chips" role="group" aria-label="Filter by category"></div>
+          <div class="kh-chips" role="group" aria-label="Filter by topic"></div>
 
           <ul class="kh-grid"></ul>
           <div class="kh-empty" hidden></div>
@@ -222,58 +385,128 @@
       </div>
     </section>
 
-    <!-- 5. Download Videos -->
-    <section id="videos" class="section" data-page="videos">
+    <!-- ===================== RESOURCES (lists are filled from resources.js) ===================== -->
+    <section id="resources" class="section" data-page="resources" aria-labelledby="res-title">
       <div class="container">
-        <header class="section-head section-head-row">
-          <div>
-            <p class="eyebrow">Videos</p>
-            <h2>Watch online, or download to learn offline.</h2>
-          </div>
+        <header class="section-head">
+          <p class="eyebrow">Resources</p>
+          <h2 id="res-title">Articles, books, downloads and media in one library.</h2>
+          <p class="lead">Browse by format. New resources are added regularly — everything here is free to read.</p>
         </header>
-        <div class="videos">
-          <article class="video">
-            <div class="video-thumb" aria-hidden="true">
-              <span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
-              <span class="duration">10:24</span>
-            </div>
-            <div class="video-body">
-              <h3>Sindhi Alphabet in 10 Minutes</h3>
-              <p class="video-meta">MP4 · 85 MB</p>
-              <a href="#videos" class="btn btn-secondary btn-sm">Download</a>
-            </div>
-          </article>
-          <article class="video">
-            <div class="video-thumb" aria-hidden="true">
-              <span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
-              <span class="duration">14:02</span>
-            </div>
-            <div class="video-body">
-              <h3>Common Greetings &amp; Phrases</h3>
-              <p class="video-meta">MP4 · 110 MB</p>
-              <a href="#videos" class="btn btn-secondary btn-sm">Download</a>
-            </div>
-          </article>
-          <article class="video">
-            <div class="video-thumb" aria-hidden="true">
-              <span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
-              <span class="duration">22:47</span>
-            </div>
-            <div class="video-body">
-              <h3>Shah Jo Risalo: An Introduction</h3>
-              <p class="video-meta">MP4 · 190 MB</p>
-              <a href="#videos" class="btn btn-secondary btn-sm">Download</a>
-            </div>
-          </article>
+
+        <ul class="res-tiles">
+          <li><a href="#articles" class="res-tile"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg></span><span class="res-tile-name">Educational Articles</span><span class="res-tile-count" data-kh-count="articles"></span></a></li>
+          <li><a href="#books" class="res-tile"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/></svg></span><span class="res-tile-name">Knowledge Books</span><span class="res-tile-count" data-kh-count="books"></span></a></li>
+          <li><a href="#downloads" class="res-tile"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg></span><span class="res-tile-name">Downloadable Resources</span><span class="res-tile-count" data-kh-count="downloads"></span></a></li>
+        </ul>
+
+        <div class="res-block" id="articles" data-kh-list="articles">
+          <h3>Educational Articles</h3>
+          <p class="res-block-sub">Clear, reliable reading on history, heritage, personalities and more.</p>
+          <ul class="kh-grid"></ul>
+          <div class="kh-empty" hidden>
+            <span class="kh-emblem" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg></span>
+            <h4>New articles are coming soon.</h4>
+            <p>We are preparing easy-to-read articles on finance, careers and Sindhi heritage.</p>
+          </div>
+        </div>
+
+        <div class="res-block" id="books" data-kh-list="books">
+          <h3>Knowledge Books</h3>
+          <p class="res-block-sub">Books and long reads worth your time.</p>
+          <ul class="kh-grid"></ul>
+          <div class="kh-empty" hidden>
+            <span class="kh-emblem" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/></svg></span>
+            <h4>Our reading list is coming soon.</h4>
+            <p>We are building a collection of useful books and PDFs. Have one to recommend?</p>
+            <a href="#contact" class="text-link">Suggest a book <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+
+        <div class="res-block" id="downloads" data-kh-list="downloads">
+          <h3>Downloadable Resources</h3>
+          <p class="res-block-sub">Guides and PDFs you can save and read offline.</p>
+          <ul class="kh-grid"></ul>
+          <div class="kh-empty" hidden>
+            <span class="kh-emblem" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg></span>
+            <h4>Downloadable guides are coming soon.</h4>
+            <p>Join the mailing list and we'll let you know when the first guides are ready.</p>
+            <a href="#join" class="text-link">Join the mailing list <span aria-hidden="true">→</span></a>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- 7. Forms -->
+    <!-- ===================== VIDEOS & PODCASTS ===================== -->
+    <section id="videos" class="section section-paper" data-page="videos" aria-labelledby="videos-title">
+      <div class="container">
+        <header class="section-head">
+          <p class="eyebrow">Videos &amp; Podcasts</p>
+          <h2 id="videos-title">Conversations, stories and knowledge — to watch and listen.</h2>
+          <p class="lead">Interviews with inspiring people, simple explainers and stories from Sindhi heritage.</p>
+        </header>
+
+        <!-- Shown automatically once Video / Podcast resources are added to resources.js -->
+        <div class="videos-latest" data-kh-list="media">
+          <h3 class="kh-subtitle">Latest episodes</h3>
+          <ul class="kh-grid"></ul>
+        </div>
+
+        <h3 class="kh-subtitle">Coming soon</h3>
+        <ul class="kh-grid series-grid">
+          <li>
+            <article class="kh-card">
+              <div class="kh-cover" data-cat="personalities" aria-hidden="true">
+                <span class="kh-emblem"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></span>
+                <span class="kh-featured">Upcoming</span>
+              </div>
+              <div class="kh-card-body">
+                <p class="kh-card-cat">Podcast &amp; Video series</p>
+                <h4 class="kh-card-title">Conversations</h4>
+                <p class="kh-card-desc">Interviews with professionals and inspiring personalities about their journeys, work and ideas.</p>
+              </div>
+            </article>
+          </li>
+          <li>
+            <article class="kh-card">
+              <div class="kh-cover" data-cat="finance" aria-hidden="true">
+                <span class="kh-emblem"><svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/></svg></span>
+                <span class="kh-featured">Upcoming</span>
+              </div>
+              <div class="kh-card-body">
+                <p class="kh-card-cat">Video series</p>
+                <h4 class="kh-card-title">Knowledge in Simple Words</h4>
+                <p class="kh-card-desc">Short explainers on finance, business and everyday topics, in plain language.</p>
+              </div>
+            </article>
+          </li>
+          <li>
+            <article class="kh-card">
+              <div class="kh-cover" data-cat="history" aria-hidden="true">
+                <span class="kh-emblem"><svg viewBox="0 0 24 24"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.7 10v8M14.3 10v8M19 10v8"/><path d="M3 20.5h18"/></svg></span>
+                <span class="kh-featured">Upcoming</span>
+              </div>
+              <div class="kh-card-body">
+                <p class="kh-card-cat">Video series</p>
+                <h4 class="kh-card-title">Sindhi Heritage Stories</h4>
+                <p class="kh-card-desc">History, culture and the personalities who shaped Sindh, told for every generation.</p>
+              </div>
+            </article>
+          </li>
+        </ul>
+
+        <div class="notify">
+          <p>Be the first to know when new episodes are released.</p>
+          <a href="#join" class="btn btn-secondary">Get notified</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CONTACT US ===================== -->
     <section id="join" class="section section-paper" data-page="join">
       <div class="container">
         <header class="section-head">
-          <p class="eyebrow">Get involved</p>
+          <p class="eyebrow">Contact Us</p>
           <h2>Join the community or say hello.</h2>
         </header>
         <div class="forms">
@@ -333,22 +566,23 @@
     </section>
   </main>
 
-  <!-- 8. Footer -->
+  <!-- Footer -->
   <footer class="site-footer">
     <div class="container footer-inner">
       <div class="footer-brand">
         <p class="footer-name">Sindhi Connect</p>
         <p class="footer-script" lang="sd" dir="rtl">سنڌي ڪنيڪٽ</p>
-        <p class="footer-tag">Celebrating Sindhi excellence worldwide.</p>
+        <p class="footer-tag">Our Roots. Our Knowledge. Our Future.</p>
       </div>
       <nav aria-label="Footer">
         <ul class="footer-links">
+          <li><a href="#home">Home</a></li>
           <li><a href="#about">About</a></li>
           <li><a href="#knowledge-hub">Knowledge Hub</a></li>
+          <li><a href="#resources">Resources</a></li>
           <li><a href="education-calculator.html">Education Calculator</a></li>
-          <li><a href="#videos">Videos</a></li>
-          <li><a href="#join">Join</a></li>
-          <li><a href="#contact">Contact</a></li>
+          <li><a href="#videos">Videos &amp; Podcasts</a></li>
+          <li><a href="#join">Contact Us</a></li>
         </ul>
       </nav>
     </div>
