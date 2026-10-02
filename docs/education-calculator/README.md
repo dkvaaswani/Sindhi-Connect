@@ -1,12 +1,13 @@
 # Children's Future Education Fund Calculator
 
-A planning tool on the Sindhi Connect website that estimates future university costs for up to four children and the
-monthly (or yearly) saving needed to meet them. It ships as two deliverables that share one dataset and one set of rules:
+A planning tool on the Sindhi Connect website for ordinary parents. For up to four children it shows the total
+education fund required, the yearly saving needed, a cost breakdown, a year-by-year plan and a country comparison.
+It ships as two deliverables that must share one dataset and one set of rules:
 
-| Deliverable | Where |
-|---|---|
-| Web calculator page | `frontend/education-calculator.html` (live at `/education-calculator.html`) |
-| Excel workbook | `frontend/downloads/Children_Education_Fund_Calculator.xlsx` (downloadable from the page) |
+| Deliverable | Where | Status |
+|---|---|---|
+| Web calculator page | `frontend/education-calculator.html` (live at `/education-calculator.html`) | v2 (simplified) |
+| Excel workbook | `frontend/downloads/Children_Education_Fund_Calculator.xlsx` | still v1 — hidden from the page until rebuilt (needs Python + openpyxl) |
 
 ## Architecture
 
@@ -15,11 +16,13 @@ that: it runs entirely in the browser, needs no backend, database or account, an
 by hand). Nothing a parent types leaves their browser.
 
 ```
-data/education/education-costs.json   MASTER dataset (fees, living costs, FX, defaults, durations, gaps) — edit this
-tools/edu-calc/build.py               regenerates the three files below from the master
+data/education/education-costs.json   MASTER dataset v2 (fee records, estimates, living costs, visas, travel,
+                                      course lengths, fee increases, FX, defaults, gaps) — edit this
+tools/edu-calc/build-data.ps1         regenerates (Windows, no extra software):
   → frontend/edu-calc/education-data.js            dataset as window.EDU_DATA for the page
-  → frontend/downloads/Children_Education_Fund_Calculator.xlsx
   → docs/education-calculator/SOURCES.md           research-source register
+tools/edu-calc/build.py               builds the Excel workbook (v1; to be updated for dataset v2)
+  → frontend/downloads/Children_Education_Fund_Calculator.xlsx
 frontend/edu-calc/calc-engine.js      calculation engine (pure functions; also runs in Node for tests)
 frontend/edu-calc/edu-calc.js         page behaviour (steps, forms, results, exports)
 frontend/edu-calc/edu-calc.css        page styles, built on the tokens in frontend/style.css

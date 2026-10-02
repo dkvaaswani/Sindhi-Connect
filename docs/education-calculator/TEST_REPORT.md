@@ -1,115 +1,50 @@
-# Test report — Education Fund Calculator
+# Test report — simplified calculator (engine and dataset v2)
 
-Run on 2 October 2026 against dataset v1.0.0. Re-run with the commands in `MAINTENANCE.md`.
+Date: 2 October 2026. Environment: Windows 11, local static server, built-in browser (Chromium) at 1280×800, 1024,
+768, 430, 390 and 375 px. Node.js, Python and LibreOffice are not installed on this machine, so the engine checks were
+run in the browser against the shipped `calc-engine.js` and `education-data.js` (the same checks are in
+`tests/edu-calc/engine.test.js` for Node).
 
-## Summary
+## Engine — automated (592 scenarios, 0 failures)
 
-| Suite | Result |
+| Check | Scenarios | Result |
+|---|---|---|
+| Every country × qualification × nationality (Pakistan, UK, Germany, USA): offered courses calculate, not-offered ones are flagged, no missing cost lines | 528 | pass |
+| 1, 2, 3, 4 children × ages 0–18 × scholarship 0/20/50/100% × return 0%, 6%, −2%, 15% (savings increase 3%) | 64 | pass |
+| Fund never below zero after any year's costs | all | pass |
+| Savings and "amount needed now" never negative | all | pass |
+| Cost breakdown adds up to the child's total; yearly plan adds up to the family total | all | pass |
+| Scholarship 20% reduces eligible costs exactly once (visa and travel unchanged); 100% leaves only visa and travel | 2 | pass |
+| Zero return: yearly saving = total ÷ saving years | 1 | pass |
+| Child already at college age: first year's cost shown as needed now | 1 | pass |
+| Course length follows country and qualification (UK medicine 5 yrs, UK law 3, US medicine 8 incl. pre-med, India MBBS 4.5) | 4 | pass |
+| Country comparison total = plan total for the same country | 1 | pass |
+| Own cost figures and fee-increase edits change the result | 1 | pass |
+
+Example (2 children, nationality Pakistan, residence Qatar, GBP): Child 1 Computer Science in the UK from 2034/35,
+Child 2 Medicine in Pakistan from 2038/39 — total GBP 395,300, required yearly saving GBP 25,627 in 2026–27.
+
+## Page — manual and scripted in the browser
+
+| Check | Result |
 |---|---|
-| Engine tests (`node --test tests/edu-calc/engine.test.js`) | **23 passed, 0 failed** |
-| Excel vs web parity (`python3 tests/edu-calc/excel_parity.py`) | **140 values compared, 0 mismatches**; largest relative difference 3.6 × 10⁻¹⁵ |
-| Workbook recalculation (LibreOffice) | 14,211 formulas, **0 errors** |
-| Browser test of the page (`tests/edu-calc/ui_test.py`, Chromium) | **31 passed, 0 failed**, no console or page errors |
-| Responsive check at 375, 390, 430, 768 and 1366 px | No horizontal page overflow at any width; wide tables scroll inside their frame |
+| Basic Information: number of children shows 1–4 child sections; residence and nationality dropdowns; no family label or family education country | pass |
+| Child sections: age 0–18, school class 0–13, education country (6), qualification (22), entry age default 18; read-only course length with note; "Not offered here" for e.g. CPA in the UK | pass |
+| Education costs: researched figures with "Published figure", "Estimated — please review", "Not needed" (visa for local students) or "Your figure"; "Why this figure?" shows note and sources; Undo restores | pass |
+| Professional qualifications show "Exam, registration and membership fees" and the pathway note | pass |
+| Scholarship slider and number box stay in sync; 0/20/50/100% update all results | pass |
+| Adjust Financial Assumptions: return, savings increase, per-child fee and living-cost increases; exchange rates appear only when a conversion is needed | pass |
+| Results: two headline boxes, child table (name, starts in, total), breakdown, child-bar + savings-line chart, collapsible yearly plan | pass |
+| Compare countries: child selector, inherited qualification, six country tick-boxes, totals with "Estimate"/"incomplete"/"Not available" tags; "Use … for …" updates the plan only when clicked | pass |
+| Start again: dialog; Cancel keeps everything; "Yes, Start Again" resets to 1 child, defaults (entry age 18, 0%), step 1; a plan saved in the browser is kept | pass |
+| Save in browser / reload, CSV export, backup file, print report | pass |
+| Header menu, dropdowns, mobile menu, footer links on the calculator page | pass |
+| No horizontal scrolling at 375, 390, 430, 768, 1024 and 1280 px; sticky summary on mobile clear of the chat button | pass |
+| Browser console: no errors | pass |
 
-## Required scenarios
+## Not tested / open
 
-| # | Scenario | Where tested | Result |
-|---|---|---|---|
-| 1 | One child, eight years until college | engine test 1 (hand-checked: zero return ⇒ required = max cumulative cost ÷ contributions = 48,000 ÷ 11) | Pass |
-| 2 | Two children with different ages | engine test 2; parity P1 | Pass |
-| 3 | Four children | engine test 3; parity P2; browser test | Pass |
-| 4 | College-entry age 18 → 21 | engine test 4; parity P4 | Pass |
-| 5 | Child already college age | engine test 5 (lump 12,000 + 12,000/yr, hand-checked); parity P3; browser notice | Pass |
-| 6 | Zero investment return | engine tests 1, 6 | Pass |
-| 7 | Positive return | engine test 7; parity P1, P2 | Pass |
-| 8 | Negative return | engine test 8; parity P3 (−2%); browser test (−5%) | Pass |
-| 9 | Zero inflation | engine test 9; parity P3 | Pass |
-| 10 | Savings already cover all costs | engine test 10 (requirement 0, never negative); parity P4 | Pass |
-| 11 | Scholarships reduce costs | engine test 11; parity P2 (25% and fixed) | Pass |
-| 12 | Children in different countries | engine test 12; parity P2 (UK, Germany, Australia, USA) | Pass |
-| 13 | Reporting currency ≠ fee currency (incl. FX drift) | engine test 13; parity P2 (USD), P3 (PKR for India) | Pass |
-| 14 | Missing university fee records | engine test 14; parity P3 (custom qualification with overrides); browser warning | Pass |
-| 15 | One-year vs longer programme (and 5.5-year MBBS, zero duration) | engine test 15; parity P3 | Pass |
-| 16 | Expenses spread across academic years | engine test 16 | Pass |
-| 17 | Combined family schedule | engine test 17 | Pass |
-| 18 | Invalid and missing inputs | engine test 18; browser test (negative age message, child left out) | Pass |
-
-Additional engine checks: university averages exclude flagged records and report median/range; monthly timing factor
-equals the future value of 12 month-end payments; every core benchmark in the real dataset resolves and projects; the
-required plan keeps a real Pakistan MBBS fund non-negative every year.
-
-## Excel vs web parity detail
-
-Differences are floating-point only (≤ 4 × 10⁻¹⁵ relative). Values compared per child: years to college, first-year cost,
-total cost and its tuition/living/other split, scholarships, future value of savings and of contributions, lump sum,
-required first-year contribution, shortfall, coverage and surplus/gap. The workbook uses only Excel-2007-era functions
-plus CSE array formulas (MEDIAN/MIN/MAX(IF())) so it works in older Excel versions; no differences arise from version
-limits. Display rounding differs only cosmetically (the page rounds to whole currency units).
-
-```
-### P1 Pakistan family, two children, defaults
-- Child 1: required first-year annual 433,576.86, lump 0.00, total cost 13,919,331.29 — matched
-- Child 2: required first-year annual 1,394,827.29, lump 0.00, total cost 69,783,785.55 — matched
-
-### P2 Four children, mixed countries, USD reporting, named university, scholarship, annual mode, FX drift
-- Child 1: required first-year annual 10,912.21, lump 0.00, total cost 493,714.60 — matched
-- Child 2: required first-year annual 3,967.21, lump 0.00, total cost 87,212.60 — matched
-- Child 3: required first-year annual 57,551.32, lump 0.00, total cost 992,342.61 — matched
-- Child 4: required first-year annual 19,761.08, lump 0.00, total cost 923,304.57 — matched
-
-### P3 Edge cases: already college age, negative return, zero inflation, 5.5-year MBBS, custom qualification
-- Child 1: required first-year annual 1,505,254.17, lump 1,293,419.32, total cost 5,967,636.36 — matched
-- Child 2: required first-year annual 2,799,322.44, lump 0.00, total cost 30,866,147.24 — matched
-- Child 3: required first-year annual 144,754.90, lump 0.00, total cost 2,114,326.56 — matched
-
-### P4 Savings already cover costs; UK home student; entry age 21
-- Child 1: required first-year annual 0.00, lump 0.00, total cost 97,347.27 — matched
-
-140 values compared, 0 mismatches, largest relative difference 3.60e-15
-```
-
-## Browser test detail
-
-```
-PASS initial rail figure — PKR 152,367
-PASS 4 child forms visible — 4
-PASS 1 child form visible — 1
-PASS invalid age message — Enter a whole number from 0 to 40.
-PASS rail warns invalid child
-PASS college-age notice
-PASS lump sum shown — Extra saving needed each month
-
-PKR 265,610
-
-on top of what you already save, rising 5% a year
-
-Plus PKR 1,033,350 needed now for costs that start before savings can grow.
-
-Total estimated cost
-PKR 10
-PASS currency switch — USD 185
-PASS custom name field shown
-PASS no-data warning for custom
-PASS override badge
-PASS university options — ['University average (3 universities)', 'NUST Islamabad', 'LUMS Lahore', 'IBA Karachi']
-PASS funding table synced to step 1 — 12345
-PASS negative return works — USD 892
-PASS annual mode label
-PASS results kpis
-PASS chart rendered
-PASS scenarios table
-PASS comparison added
-PASS per-child schedule
-PASS CSV export — 6403
-PASS JSON backup
-PASS save local
-PASS reset to example — PKR 152,367
-PASS load backup restores — ('USD 440', 'USD 440')
-PASS bad backup rejected
-PASS restore saved
-PASS print report built
-PASS keyboard step nav
-PASS home nav has calculator link
-PASS no page errors
-```
+- **Excel workbook** — not yet rebuilt for v2 (needs Python + openpyxl), so Excel-vs-web parity was not run. The
+  workbook link is removed from the page until it matches.
+- Node-based test run (`node --test`) — Node is not installed; the identical checks passed in the browser.
+- Research completeness — see "Known gaps" in SOURCES.md for every figure that is still a planning estimate.

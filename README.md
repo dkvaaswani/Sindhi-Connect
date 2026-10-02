@@ -35,9 +35,11 @@ Push to GitHub and the live site updates automatically.
 
 ## Education Fund Calculator
 
-`frontend/education-calculator.html` estimates future university costs for up to four children and the monthly saving
-needed. Its fee data lives in `data/education/education-costs.json`; after editing it run `python3 tools/edu-calc/build.py`
-to regenerate the page data, the Excel workbook and the source register. Full details: `docs/education-calculator/`.
+`frontend/education-calculator.html` estimates what each child's university course may cost, how much the family may
+need to save each year, and how the cost changes between six study countries. Its fee data lives in
+`data/education/education-costs.json`; after editing it run
+`powershell -ExecutionPolicy Bypass -File tools/edu-calc/build-data.ps1` to regenerate the page data and the source
+register. The Excel version is being rebuilt for the simplified method. Full details: `docs/education-calculator/`.
 
 ## Hosting
 

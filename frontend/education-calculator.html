@@ -94,17 +94,16 @@
         <div>
           <p class="hero-script" lang="sd" dir="rtl">ٻارن جي تعليم لاءِ اڄ کان رٿابندي</p>
           <h1>Children's Future Education Fund Calculator</h1>
-          <p class="ec-hero-sub">Plan today for your children's education tomorrow. Estimate future university expenses and discover how much you may need to save each month to prepare for their higher education.</p>
+          <p class="ec-hero-sub">Plan today for your children's education tomorrow. See what each child's university course may cost in total, how much your family may need to save each year, and how the cost changes from country to country.</p>
           <div class="hero-actions">
             <a href="#ec-app" class="btn btn-primary">Start planning</a>
-            <a href="downloads/Children_Education_Fund_Calculator.xlsx" class="btn btn-ghost" download>Download the Excel version</a>
           </div>
         </div>
         <aside class="ec-hero-note">
           <h2>Before you start</h2>
           <ul>
-            <li>Results are estimates based on the assumptions you choose. Fees, inflation, exchange rates and investment returns can all turn out differently.</li>
-            <li>Fees come from official university pages, checked on <span data-ec="dataset-date">2 October 2026</span>. Some countries and courses have gaps, which are marked.</li>
+            <li>Results are estimates based on published university fees and clearly labelled planning assumptions. Real costs can turn out higher or lower.</li>
+            <li>Fees were checked on <span data-ec="dataset-date">2 October 2026</span>. Figures marked "Estimated — please review" are not official fees; you can change any figure.</li>
             <li>Everything stays in your browser. Nothing you type is sent to Sindhi Connect.</li>
           </ul>
         </aside>
@@ -112,66 +111,70 @@
     </section>
 
     <div id="ec-app" class="ec-app" tabindex="-1">
-      <noscript><div class="container"><p class="ec-noscript">Please turn on JavaScript to use the calculator, or download the Excel version above.</p></div></noscript>
+      <noscript><div class="container"><p class="ec-noscript">Please turn on JavaScript to use the calculator.</p></div></noscript>
       <div class="container ec-layout">
         <div class="ec-main">
-          <nav class="ec-steps" aria-label="Calculator steps">
-            <ol>
-              <li><button type="button" data-step="1" aria-current="step"><span class="ec-step-n">1</span> Family</button></li>
-              <li><button type="button" data-step="2"><span class="ec-step-n">2</span> Education plan</button></li>
-              <li><button type="button" data-step="3"><span class="ec-step-n">3</span> Savings assumptions</button></li>
-              <li><button type="button" data-step="4"><span class="ec-step-n">4</span> Results</button></li>
-              <li><button type="button" data-step="5"><span class="ec-step-n">5</span> Reports &amp; backup</button></li>
-            </ol>
-          </nav>
+          <div class="ec-topbar">
+            <nav class="ec-steps" aria-label="Calculator steps">
+              <ol>
+                <li><button type="button" data-step="1" aria-current="step"><span class="ec-step-n">1</span> Basic information</button></li>
+                <li><button type="button" data-step="2"><span class="ec-step-n">2</span> Education costs</button></li>
+                <li><button type="button" data-step="3"><span class="ec-step-n">3</span> Results</button></li>
+                <li><button type="button" data-step="4"><span class="ec-step-n">4</span> Compare countries</button></li>
+                <li><button type="button" data-step="5"><span class="ec-step-n">5</span> Save &amp; print</button></li>
+              </ol>
+            </nav>
+            <button type="button" class="btn ec-btn-reset" data-action="reset">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+              Start again
+            </button>
+          </div>
 
           <form class="ec-form" id="ec-form" novalidate autocomplete="off" onsubmit="return false">
             <!-- Step 1 -->
             <section class="ec-step" data-step-panel="1" aria-labelledby="ec-h1">
-              <h2 id="ec-h1">Family details</h2>
-              <p class="ec-intro">Tell us about your family and each child. Ages are in whole years.</p>
-              <div class="ec-grid" id="ec-family"></div>
+              <h2 id="ec-h1" tabindex="-1">Basic information</h2>
+              <p class="ec-intro">Tell us about your family. Nationality decides whether local or international university fees apply, and whether a student visa is needed.</p>
+              <div class="ec-grid" id="ec-basic"></div>
               <div id="ec-children"></div>
             </section>
 
             <!-- Step 2 -->
             <section class="ec-step" data-step-panel="2" aria-labelledby="ec-h2" hidden>
-              <h2 id="ec-h2">Education plan</h2>
-              <p class="ec-intro">These are today's costs for each child's chosen course, in the currency the university charges. Change any figure to use your own estimate; changed figures are marked as your override, not a published fee.</p>
+              <h2 id="ec-h2" tabindex="-1">Education costs</h2>
+              <p class="ec-intro">Today's yearly costs for each child's course, filled in from university fees and living-cost research. Change any figure to use your own estimate.</p>
               <div id="ec-plans"></div>
+              <div id="ec-coverage"></div>
+              <details class="ec-advanced" id="ec-advanced">
+                <summary>Adjust Financial Assumptions</summary>
+                <div id="ec-assumptions"></div>
+              </details>
             </section>
 
             <!-- Step 3 -->
             <section class="ec-step" data-step-panel="3" aria-labelledby="ec-h3" hidden>
-              <h2 id="ec-h3">Savings assumptions</h2>
-              <p class="ec-intro">Defaults depend on the education country and your reporting currency. They are planning assumptions, not predictions or guaranteed rates.</p>
-              <div class="ec-grid" id="ec-assumptions"></div>
-              <h3 class="ec-sub">Savings, scholarships and other funding</h3>
-              <div class="ec-table-wrap"><table class="ec-table ec-funding" id="ec-funding"></table></div>
-              <h3 class="ec-sub">Currency conversion</h3>
-              <p class="ec-help-block" id="ec-fx-note"></p>
-              <div class="ec-table-wrap"><table class="ec-table" id="ec-fx"></table></div>
+              <h2 id="ec-h3" tabindex="-1">Results</h2>
+              <div id="ec-results"></div>
             </section>
 
             <!-- Step 4 -->
             <section class="ec-step" data-step-panel="4" aria-labelledby="ec-h4" hidden>
-              <h2 id="ec-h4">Results</h2>
-              <div id="ec-results"></div>
+              <h2 id="ec-h4" tabindex="-1">Compare education countries</h2>
+              <p class="ec-intro">See the total cost of one child's course in each country, using that country's own fees, living costs, course length and price rises. This does not change your plan unless you choose to.</p>
+              <div id="ec-compare"></div>
             </section>
 
             <!-- Step 5 -->
             <section class="ec-step" data-step-panel="5" aria-labelledby="ec-h5" hidden>
-              <h2 id="ec-h5">Reports and backup</h2>
-              <p class="ec-intro">Your plan lives only in this browser. Download a copy to keep it, or load one you saved earlier.</p>
+              <h2 id="ec-h5" tabindex="-1">Save and print</h2>
+              <p class="ec-intro">Your plan lives only in this browser. Print it, download a copy, or save it on this device.</p>
               <div class="ec-actions-grid">
-                <div class="ec-action"><h3>Print or save as PDF</h3><p>A clean report with every child, the yearly schedule and the assumptions used.</p><button type="button" class="btn btn-secondary btn-sm" data-action="print">Print report</button></div>
-                <div class="ec-action"><h3>Spreadsheet export</h3><p>Summary and year-by-year schedule as a CSV file for Excel or Google Sheets.</p><button type="button" class="btn btn-secondary btn-sm" data-action="csv">Export CSV</button></div>
-                <div class="ec-action"><h3>Scenario backup</h3><p>All your inputs as a JSON file you can load again later on any device.</p><button type="button" class="btn btn-secondary btn-sm" data-action="json">Download backup</button>
+                <div class="ec-action"><h3>Print or save as PDF</h3><p>A clean report with each child, the yearly plan and the assumptions used.</p><button type="button" class="btn btn-secondary btn-sm" data-action="print">Print report</button></div>
+                <div class="ec-action"><h3>Spreadsheet export</h3><p>The summary and year-by-year plan as a CSV file for Excel or Google Sheets.</p><button type="button" class="btn btn-secondary btn-sm" data-action="csv">Export CSV</button></div>
+                <div class="ec-action"><h3>Backup file</h3><p>All your answers as a file you can load again later on any device.</p><button type="button" class="btn btn-secondary btn-sm" data-action="json">Download backup</button>
                   <label class="btn btn-sm ec-btn-outline" for="ec-load">Load backup</label><input type="file" id="ec-load" accept="application/json,.json" class="sr-only"></div>
-                <div class="ec-action"><h3>Save in this browser</h3><p>Keeps your plan on this device so it is here next time. Clearing browser data removes it.</p><button type="button" class="btn btn-secondary btn-sm" data-action="save">Save plan</button>
+                <div class="ec-action"><h3>Save in this browser</h3><p>Keeps your plan on this device so it is here next time. "Start again" does not delete it.</p><button type="button" class="btn btn-secondary btn-sm" data-action="save">Save plan</button>
                   <button type="button" class="btn btn-sm ec-btn-outline" data-action="restore">Reload saved plan</button></div>
-                <div class="ec-action"><h3>Excel calculator</h3><p>The same calculation as a workbook you can keep offline and edit.</p><a class="btn btn-secondary btn-sm" href="downloads/Children_Education_Fund_Calculator.xlsx" download>Download .xlsx</a></div>
-                <div class="ec-action"><h3>Start again</h3><p>Clears every input and returns to the example values.</p><button type="button" class="btn btn-sm ec-btn-danger" data-action="reset">Clear and reset</button></div>
               </div>
               <p class="form-status" id="ec-status" role="status"></p>
             </section>
@@ -183,8 +186,8 @@
           </form>
         </div>
 
-        <aside class="ec-rail" aria-label="Plan summary" aria-live="polite">
-          <div class="ec-rail-inner" id="ec-rail"></div>
+        <aside class="ec-rail" aria-label="Plan summary">
+          <div class="ec-rail-inner" id="ec-rail" aria-live="polite"></div>
         </aside>
       </div>
     </div>
@@ -195,21 +198,30 @@
         <div class="ec-method-grid">
           <div>
             <h3>Costs</h3>
-            <p>Each course's tuition, other fees and living costs grow with inflation from the published fee year to the year they are paid. Tuition and living costs have separate inflation rates. One-time costs fall in the first study year, and every study year is paid when it starts.</p>
+            <p>Each cost line starts from today's published figure and grows every year with its own price rise: tuition and university fees with the fee increase for that country and course, living costs with the living-cost increase. Each study year is paid when it starts; one-time costs fall in the first year.</p>
           </div>
           <div>
             <h3>Savings</h3>
-            <p>Savings grow at your assumed return. Monthly contributions are paid at month-end and rise each year by your chosen percentage. The monthly figure shown is the smallest amount that keeps each child's fund from running out in any study year.</p>
+            <p>Savings are paid at the end of each year and grow at your assumed return. The yearly saving shown is the smallest amount that never lets the fund run out in any study year. If a child starts college before any saving is possible, the amount needed now is shown separately.</p>
           </div>
           <div>
             <h3>Sources</h3>
-            <p>Fees are taken from official university pages and averaged only when they share a country, course, student category and currency. Every figure links to its source on the Education plan step. <a class="text-link" href="downloads/Children_Education_Fund_Calculator.xlsx" download>The Excel version</a> shows every formula.</p>
+            <p>University fees are averaged only across comparable courses: same country, course, fee type (local or international) and currency, after adjusting each fee to the same year. Every figure shows its source, and estimates are labelled "Estimated — please review".</p>
           </div>
         </div>
         <p class="ec-disclaimer" id="ec-disclaimer"></p>
       </div>
     </section>
   </main>
+
+  <dialog class="ec-dialog" id="ec-reset-dialog" aria-labelledby="ec-reset-title" aria-describedby="ec-reset-text">
+    <h2 id="ec-reset-title">Start again?</h2>
+    <p id="ec-reset-text">Are you sure you want to start again? All information entered in this calculator will be cleared.</p>
+    <div class="ec-dialog-actions">
+      <button type="button" class="btn ec-btn-outline" data-dialog="cancel">Cancel</button>
+      <button type="button" class="btn ec-btn-danger-solid" data-dialog="confirm">Yes, Start Again</button>
+    </div>
+  </dialog>
 
   <footer class="site-footer">
     <div class="container footer-inner">

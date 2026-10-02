@@ -231,3 +231,141 @@ label.ec-btn-outline:focus-within { outline: 3px solid var(--gold); outline-offs
   .ec-print-note { font-size: 8.5pt; color: #333; }
   .ec-print tr { page-break-inside: avoid; }
 }
+
+/* =========================================================
+   v2 additions: simplified calculator
+   ========================================================= */
+/* Top bar: steps + a prominent "Start again" */
+.ec-topbar { display: flex; flex-direction: column-reverse; align-items: stretch; gap: var(--s-3); margin-bottom: var(--s-5); }
+.ec-topbar .ec-btn-reset { align-self: flex-end; }
+.ec-topbar .ec-steps ol { margin-bottom: 0; }
+.ec-topbar .ec-steps { min-width: 0; }
+.ec-btn-reset { flex: none; gap: var(--s-2); min-height: 48px; background: var(--white); border-color: var(--red); color: var(--red); }
+.ec-btn-reset:hover { background: #fbe9ea; }
+.ec-btn-reset svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Confirmation dialog */
+.ec-dialog { width: min(440px, calc(100vw - 32px)); padding: var(--s-6); border: 0; border-radius: var(--r-md); box-shadow: 0 24px 64px rgba(14, 16, 22, .35); color: var(--text); }
+.ec-dialog::backdrop { background: rgba(14, 16, 22, .55); }
+.ec-dialog h2 { font-size: var(--fs-lg); margin-bottom: var(--s-3); }
+.ec-dialog p { color: var(--muted); }
+.ec-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-3); margin-top: var(--s-5); }
+.ec-btn-danger-solid { background: var(--red); border-color: var(--red); color: var(--white); }
+.ec-btn-danger-solid:hover { background: #8a1823; }
+
+/* Child dashboards */
+.ec-duration { margin-top: var(--s-4); }
+.ec-duration-text { font-size: var(--fs-sm); padding: var(--s-3) var(--s-4); background: var(--white); border: 1px solid var(--line); border-radius: var(--r-sm); }
+.ec-duration .ec-help { margin-top: var(--s-2); }
+.ec-warn ul { margin: var(--s-2) 0 0; padding-left: 1.1em; }
+
+/* Education cost tables */
+.ec-plan-meta { margin-top: var(--s-2); font-size: var(--fs-sm); color: var(--muted); }
+.ec-costs th[scope="row"] { white-space: normal; min-width: 220px; }
+.ec-costs th[scope="row"] label { font-weight: 600; }
+.ec-timing { color: var(--muted); font-weight: 400; font-size: .8125rem; }
+.ec-help-row { display: block; margin-top: 2px; font-weight: 400; }
+.ec-costs .ec-affix { min-width: 170px; }
+.ec-status { display: inline-block; padding: 2px var(--s-2); font-size: .75rem; font-weight: 600; border-radius: 999px; white-space: nowrap; }
+.ec-status-verified { background: #e6f4ec; color: #1d5b3a; }
+.ec-status-estimated { background: #fdf3dc; color: #7a5200; }
+.ec-status-missing { background: #fbe9ea; color: var(--red); }
+.ec-status-override { background: var(--ink); color: var(--gold); }
+.ec-status-notNeeded { background: var(--paper); color: var(--muted); border: 1px solid var(--line); }
+.is-missing th, .is-missing td { background: #fff7f7; }
+.ec-why { margin-top: var(--s-1); font-size: .8125rem; }
+.ec-why summary { cursor: pointer; color: var(--gold-text); font-weight: 600; }
+.ec-why p { margin-top: var(--s-1); color: var(--muted); max-width: 46ch; }
+
+/* Scholarship / part-time work */
+.ec-coverage { margin-top: var(--s-6); padding: var(--s-5); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper); }
+.ec-coverage-label { display: block; font-weight: 600; margin-bottom: var(--s-3); }
+.ec-coverage-controls { display: flex; align-items: center; gap: var(--s-4); }
+.ec-coverage-controls input[type="range"] { flex: 1; min-width: 0; accent-color: var(--gold-text); height: 32px; }
+.ec-coverage-num { width: 120px; flex: none; }
+.ec-coverage .ec-help { margin-top: var(--s-3); max-width: 75ch; }
+
+/* Adjust Financial Assumptions */
+.ec-advanced { margin-top: var(--s-5); border: 1px solid var(--line); border-radius: var(--r-md); }
+.ec-advanced > summary { cursor: pointer; padding: var(--s-4) var(--s-5); font-weight: 600; min-height: 48px; }
+.ec-advanced > summary::marker, .ec-schedule > summary::marker { color: var(--gold-text); }
+.ec-advanced[open] > summary { border-bottom: 1px solid var(--line); }
+.ec-advanced > div { padding: var(--s-5); }
+.ec-advanced .ec-table td .ec-help { display: block; margin-top: var(--s-1); max-width: 34ch; }
+.ec-advanced .ec-table .ec-affix { max-width: 140px; }
+
+/* Results: two big figures */
+.ec-headline { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); margin-top: var(--s-4); }
+.ec-big { padding: var(--s-6); border: 2px solid var(--gold); border-radius: var(--r-md); background: #fffbf1; }
+.ec-big-dark { background: var(--ink); border-color: var(--ink); color: var(--white); }
+.ec-big-label { font-size: var(--fs-sm); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--gold-text); }
+.ec-big-dark .ec-big-label { color: var(--gold); }
+.ec-big-figure { margin-top: var(--s-2); font-family: var(--font-display); font-size: clamp(1.75rem, 1.2rem + 1.8vw, 2.5rem); font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ec-big-dark .ec-big-figure { color: var(--gold); }
+.ec-big-note { margin-top: var(--s-3); font-size: var(--fs-sm); color: var(--muted); }
+.ec-big-dark .ec-big-note { color: var(--muted-dark); }
+.ec-big-lump { margin-top: var(--s-3); padding-left: var(--s-3); border-left: 2px solid var(--gold); font-size: var(--fs-sm); }
+.ec-total-row th, .ec-total-row td { background: var(--paper); font-weight: 600; }
+
+/* Cost breakdown */
+.ec-breakdown { padding: var(--s-5); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--white); }
+.ec-bar { height: 22px; }
+.ec-breakdown-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2) var(--s-6); margin: var(--s-2) 0 0; padding: 0; list-style: none; font-size: var(--fs-sm); }
+.ec-breakdown-list li { display: grid; grid-template-columns: 14px 1fr auto 3.2em; align-items: center; gap: var(--s-2); padding: var(--s-1) 0; border-bottom: 1px solid var(--line); }
+.ec-bd-value { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.ec-bd-share { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.ec-bd-total { display: flex; justify-content: space-between; gap: var(--s-3); padding-top: var(--s-2); font-size: var(--fs-md); }
+.ec-bd-total strong { font-variant-numeric: tabular-nums; }
+
+/* Chart: child bars + savings line */
+.ec-line-saving { fill: none; stroke: #2f6f4f; stroke-width: 2.5; stroke-linejoin: round; }
+.ec-line-saving-halo { fill: none; stroke: var(--white); stroke-width: 6; stroke-linejoin: round; }
+.ec-dot-saving { fill: #2f6f4f; stroke: var(--white); stroke-width: 1.5; }
+.ec-key-line { border-top-color: #2f6f4f; }
+
+/* Year-by-year plan */
+.ec-schedule { margin-top: var(--s-6); }
+.ec-schedule > summary { cursor: pointer; font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 600; padding: var(--s-2) 0; }
+.ec-schedule .ec-help-block { margin-top: var(--s-2); }
+.ec-schedule .ec-help { margin-top: var(--s-2); }
+
+/* Compare countries */
+.ec-compare-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+.ec-check-group { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; }
+.ec-check-group legend { font-size: var(--fs-sm); font-weight: 600; margin-bottom: var(--s-2); }
+.ec-checks { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.ec-check { display: inline-flex; align-items: center; gap: var(--s-2); min-height: 40px; padding: 0 var(--s-3); border: 1px solid #d8cfbd; border-radius: 999px; background: var(--white); font-size: var(--fs-sm); cursor: pointer; }
+.ec-check input { width: 18px; height: 18px; accent-color: var(--ink); }
+.ec-field-label { font-size: var(--fs-sm); font-weight: 600; }
+.ec-readonly { min-height: 48px; display: flex; align-items: center; padding: 0 var(--s-4); background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-sm); }
+.ec-tag { margin-left: var(--s-2); padding: 1px var(--s-2); font-size: .7rem; font-weight: 600; border-radius: 999px; background: var(--gold); color: var(--ink); vertical-align: middle; }
+.ec-cmp-note { display: block; margin-top: 2px; font-weight: 400; }
+.ec-compare td .btn { white-space: nowrap; }
+
+/* Rail: two figures */
+.ec-rail-gap { margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--ink-line); }
+.ec-rail-figure { font-size: 1.6rem; overflow-wrap: normal; word-break: keep-all; }
+.ec-rail-figure-2 { font-size: 1.6rem; }
+.ec-rail-inner .btn { margin-top: var(--s-5); }
+
+@media (max-width: 1024px) {
+  .ec-rail-inner { grid-template-columns: 1fr 1fr; }
+  .ec-rail-gap { margin-top: 0; padding-top: 0; border-top: 0; }
+  .ec-rail-label { grid-row: 1; grid-column: auto; }
+  .ec-rail-figure { grid-row: 2; grid-column: auto; font-size: 1.15rem; }
+  .ec-rail-figure-2 { font-size: 1.15rem; }
+  .ec-rail-inner .btn { display: none; }
+  /* keep the chat button clear of the sticky summary bar */
+  .ec-body .sc-chat { bottom: 92px; }
+}
+@media (max-width: 760px) {
+  .ec-headline, .ec-breakdown-list { grid-template-columns: 1fr; }
+  .ec-big { padding: var(--s-5); }
+  .ec-compare-form { grid-template-columns: 1fr; }
+  .ec-coverage { padding: var(--s-4); }
+  .ec-coverage-controls { flex-wrap: wrap; }
+  .ec-coverage-controls input[type="range"] { flex-basis: 100%; }
+  .ec-costs th[scope="row"] { min-width: 160px; }
+  .ec-topbar .ec-btn-reset { align-self: stretch; }
+  .ec-dialog-actions .btn { flex: 1; }
+}
