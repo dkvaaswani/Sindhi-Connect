@@ -1,120 +1,129 @@
-# Methodology and assumptions
+# Calculation methodology (dataset and engine v2)
 
-The web page (`frontend/edu-calc/calc-engine.js`) and the Excel workbook implement the same rules. The parity check in
-`tests/edu-calc/excel_parity.py` confirms they agree (largest relative difference ≈ 4 × 10⁻¹⁵, i.e. floating-point noise).
+The web calculator (`frontend/edu-calc/calc-engine.js`) implements the rules below. The Excel workbook must implement the
+same rules so both give the same answers for the same inputs (see "Excel status" at the end).
 
-> This is an educational planning tool, not a guarantee of future costs or investment performance. Fees, living costs,
-> inflation, exchange rates and investment returns may differ from the figures used. Always confirm fees with the university.
+## 1. Inputs a parent gives
 
-## 1. Cost basis for a child
+| Input | Used for |
+|---|---|
+| Number of children (1–4) | Only that many children are calculated. |
+| Country of residence | First-travel estimate (home region → education country). |
+| Nationality | Local or international fees, and whether a student visa is needed. |
+| Show results in (currency) | Reporting currency; "Automatic" = Child 1's education country. |
+| Per child: age (0–18), school class (0–13), education country, qualification, college-entry age (default 18) | Course, timing and cost lookup. School class is for the parent's reference only. |
+| Scholarship / part-time work % (default 0%) | Reduces eligible costs (section 5). |
+| Optional — Adjust Financial Assumptions | Investment return, yearly increase in savings, each child's fee and living-cost increases, exchange rates. |
+| Optional — any cost line | The parent's own figure replaces the researched one ("Your figure"). |
 
-1. **Country, qualification, student category.** The category defaults to the country's usual category for the family
-   (e.g. "Pakistani national" in Pakistan, "International" in the UK). Domestic and international fees are never mixed.
-2. **Benchmark.** Either the *university average* for that country + qualification + category, or one named university.
-3. **University average.** Uses only records with *Include in average = Yes* that share the currency of the first such
-   record. Shown with count, mean (used), median, lowest and highest. One record is labelled a *single-institution
-   benchmark*. Historical figures, published ranges and regulatory caps are kept for reference but excluded.
-   Adjacent fee years (e.g. 2025-26 and 2026-27) may be averaged; each record lists its year. The average's fee year is the
-   rounded mean of the records' fee-year starts.
-4. **Living costs.** From the country's living-cost benchmark (category-specific row if one exists, else "All"), converted
-   to the fee currency if needed. A named university record that publishes its own cost of attendance
-   (*Living costs from this record = Yes*) uses those figures instead — never both, to avoid double counting.
-   Visa "proof of funds" amounts are never treated as living costs.
-5. **One-time costs.** Admission/registration and other one-time fees (from records), visa/application (from the living
-   table, international only), travel and relocation (parent's estimate). Refundable deposits are excluded.
-6. **Overrides.** Any figure a parent types replaces the researched one and is labelled a user override.
-7. **Duration.** Parent's figure, else the named record's duration, else the course-duration table, else the country default.
-   Fractional durations (e.g. 5.5 years) charge the final year pro rata.
+## 2. Fee status (local or international)
 
-## 2. Timeline and timing conventions
+`domestic` when the nationality is in the education country's `domesticNationalities` list (Germany: EU/EEA
+nationalities; UK: UK and Ireland; Australia: Australia and New Zealand), otherwise `international`. Residence,
+settled status and scholarships can change real fee status; the calculator says so.
 
-- Plan year *p* = 1, 2, … runs from time *p − 1* to *p* (years from now). Year 1 is the academic year starting in the
-  plan-start year (2026).
-- Years until college *n* = max(0, college-entry age − current age), whole years. If the entry age is not after the
-  current age, *n* = 0 and costs start now.
-- Study year *k* (0-based) is paid at the **start** of plan year *n + k + 1*. No costs are forecast before entry.
-- Contributions: **monthly** contributions are paid at each month-end; **annual** contributions at year-end. Contributions
-  rise each year by the escalation rate *g* and continue up to the year before the last study-year payment
-  (*P* = *n* + ⌈duration⌉ − 1 years), so they also help during college.
-- Other planned funding (a lump sum) arrives with the first study year.
+## 3. Course length
 
-## 3. Formulas
+From `courseDurations` (country × qualification), shown read-only with a note. `variable: true` adds "typical length; the
+actual length may vary". `years: null` means **not offered** in that country (e.g. CPA in the UK, CA in Germany and the
+USA): the child gets a clear message and the comparison shows "Not available".
 
-Future cost of a component paid in plan year *p*:
+**Two-stage courses** (`preStage`): US medicine, dentistry, physiotherapy (DPT) and law, US pharmacy, and the CPA/CA
+pathways in the USA and Australia start with a bachelor's degree. Those first years use the pre-stage qualification's
+fees (e.g. a science bachelor's), the remaining years the professional programme's fees.
 
-```
-Future cost = Current cost × (1 + inflation)^((p − 1) + (plan start year − fee year))
-```
+Fractional lengths (e.g. 4.5 years) charge the last year's annual costs pro rata.
 
-Tuition and other mandatory fees, admission and other one-time fees use **tuition inflation**; accommodation, food,
-transport, insurance, books, personal costs, visa and travel use **living-cost inflation**.
+## 4. Cost lines (today's prices, education country's currency)
 
-```
-Gross cost (fee currency)   = tuition + other fees + living + one-time (first study year only), each × fraction of year studied
-Contingency                 = Gross × contingency %
-Exchange rate in year p     = reference rate (fee → reporting) × (1 + FX drift)^(p − 1)
-Scholarship                 = min(tuition, tuition × scholarship %) × rate + fixed scholarship × fraction
-Net education expense (Ep)  = max(0, (Gross + Contingency) × rate − Scholarship)
-```
+| Line | Timing | Grows with | Reduced by scholarship % |
+|---|---|---|---|
+| Tuition fees | each study year | fee increase | yes |
+| Other university and course fees | each study year | fee increase | yes |
+| Admission and registration | once, year 1 | fee increase | yes |
+| Accommodation, food, local transport, health insurance, books | each study year | living-cost increase | yes |
+| Visa and application | once, year 1 | living-cost increase | no |
+| First travel and settling in | once, year 1 | living-cost increase | no |
 
-Monthly timing factor (year-end value of 12 end-of-month payments, per unit of annual total), with return *r*:
+**Fee benchmark.** Records flagged `includeInAverage` with the same country, qualification, fee status and currency are
+averaged after each is grown to the plan start year: `fee × (1 + fee increase)^(planStart − feeYearStart)`. Fees that
+differ by year of study (e.g. clinical years) are entered as the course-average year (derivation in the record notes).
+If no published record exists, an **estimate** is used and labelled "Estimated — please review": either a fixed figure
+from an official fee list (professional bodies, non-resident rates) or a rule that follows published fees (`derive`:
+another course's fee × multiplier, or the average of the country's non-medical degrees). If neither exists the line
+shows "No figure yet — please enter" and contributes 0 until the parent enters a figure.
 
-```
-f = (r / ((1 + r)^(1/12) − 1)) / 12        (f = 1 when r = 0; for annual contributions f = 1)
-```
+**Living costs** come from one benchmark per country (`living`), with separate health-insurance figures for local and
+international students where they differ. Personal spending is not included.
 
-Fund each year (the auditable cash-flow table in the workbook's *Savings Calculator*):
+**Visa** — none when the child is a local national; otherwise the destination's official student-visa charge
+(`visas`), with nationality-specific amounts where the official table gives them (Pakistan). The UK Immigration Health
+Surcharge is a yearly health-insurance cost, not a visa cost, so it is not counted twice.
 
-```
-Available after costs  A_p = Opening_p + Other funding_p − E_p
-Closing_p              = A_p × (1 + r) + Contributions_p
-Contributions_p        = (monthly × 12 × f + annual) × (1 + g)^(p − 1)      for p ≤ P, else 0
-```
+**First travel** — `fare(home region → destination) + settling-in allowance`, or a smaller domestic move when residence
+= education country. Day-to-day travel is the separate Local transport line, so travel is never counted twice.
 
-**Current plan (coverage).** Uses only existing savings and contributions. If *A_p* < 0 the unfunded part is recorded as
-a shortfall for that year and the balance is floored at zero. Coverage = 1 − total shortfall ÷ total cost. The surplus is
-the balance left after the last study year (or minus the total shortfall).
+**Currency** — every amount is converted at the dataset's reference rates (units per USD, dated). A parent may override
+a rate under Adjust Financial Assumptions; the date is shown whenever a conversion happens.
 
-**Required additional contribution.** Find the smallest first-year amount *x* (rising by *g* each year, paid with the same
-timing as the chosen contribution mode) such that *A_p* ≥ 0 in every year with a cost. Because balances are linear in *x*:
-*A_p(x) = a_p + b_p·x*, where *a_p* uses existing resources and *b_p* is the value of a unit contribution stream. Then
-`x = max over cost years of −a_p / b_p` (never below zero). Where *b_p* = 0 — a cost due before any contribution can
-arrive, e.g. a child already at college age — an **up-front lump sum** *L* = max(−a_p ÷ (1 + r)^(p−1)) is required first,
-and *x* is solved after adding *L*. The required monthly amount is *x* ÷ 12 (monthly mode).
+## 5. Scholarship / part-time work
 
-Family results add the children's yearly figures; children starting in different years are handled naturally because each
-has its own timeline on the same calendar.
+`net line = gross line × (1 − c)` for every line marked "yes" above, applied once at the point the yearly cost is
+calculated. Visa and first-travel costs are not reduced. The breakdown, totals, schedule, chart and comparison all use
+these net amounts, so the reduction is never applied twice.
 
-**Safe handling.** Zero, negative (above −99%) and positive returns are valid. Zero years remaining, zero duration and
-fully-funded plans return zero requirements. Invalid inputs (non-whole or out-of-range ages, duration outside 0–10,
-negative amounts, out-of-range assumptions) are reported and that child is left out instead of producing errors.
+## 6. Timing and the yearly plan
 
-## 4. Currency
+Plan year *p* = 1, 2, … is calendar year `planStartYear + p − 1`. A child starts college in year `n + 1`, where
+`n = max(0, entryAge − age)`. Education costs are paid at the **start** of each study year; family savings are paid at
+the **end** of each year, from year 1 until the year before the child's last cost. The fund earns the investment
+return on what is left after costs.
 
-Rates are stored as units per 1 USD with a reference date (1 Oct 2026): EUR, GBP, AUD and INR are cross-rates from the
-European Central Bank euro reference rates; PKR is the State Bank of Pakistan mark-to-market revaluation rate.
-Conversion A → B = amount ÷ rate_A × rate_B. Parents can type their own rates and an annual drift. Rates are never
-substituted silently: a missing rate raises an error.
+Line amount in plan year *p*: `amount × (1 + rate)^(year − baseYear) × fraction × FX`, where *rate* is the fee or
+living-cost increase for that line and *baseYear* is the year the figure was quoted for.
 
-## 5. Default assumptions (editable)
+## 7. Required yearly savings
 
-| Assumption | Default | Basis |
+For each child, with return *r* and yearly increase *g*:
+
+- `a_p` = fund after year-*p* costs if nothing were saved (carried forward with *r*);
+- `b_p` = fund after year-*p* costs per 1 unit of yearly saving, where year-*q* saving is `(1 + g)^(q − 1)`;
+- **amount needed now** `L = max(−a_p / (1 + r)^(p − 1))` over years with costs that no saving can reach yet
+  (e.g. a child already at college age);
+- **first-year saving** `x = max(−(a_p + L·(1 + r)^(p − 1)) / b_p)` over years with costs, floored at 0.
+
+So the fund never goes below zero in any study year. With r = 0 and g = 0 this equals total cost ÷ number of saving
+years. The family's yearly saving is the sum over children, so it changes as children start and finish; the headline
+shows **this year's** amount and the yearly plan shows every year. Negative savings are never shown; when costs start
+immediately the "amount needed now" is shown instead, in plain language.
+
+## 8. Results
+
+- **Total Education Fund Required** = sum of all children's net yearly costs over their full courses, at future prices.
+- **Required Yearly Savings** = the family's saving for the first plan year (section 7).
+- **Each child** — start year and total cost.
+- **Cost breakdown** — tuition, accommodation, food, transport, health insurance, books, other university and course fees
+  (incl. admission), and visa/application/travel/relocation; the parts add up to the total.
+- **Chart** — one bar series per child (that child's costs in each year) and one line for the family's required saving
+  that year (not a cumulative balance).
+- **Year-by-year plan** — year, children studying, expenses, suggested saving, remaining fund after that year's saving.
+- **Compare countries** — the same child and qualification in each chosen country, using that country's own fees,
+  living costs, course length, visa, travel and default price rises; the parent's own cost edits are not carried over.
+
+## 9. Defaults
+
+| Assumption | Default | Source |
 |---|---|---|
-| Tuition inflation | PK 10%, IN 8%, US 4%, UK 5%, AU 5%, DE 2% | PK: AKU's published MBBS schedule rises ~10%/yr; UK: Manchester reserves up to 7%/yr; DE: BW fee unchanged since 2017/18; others illustrative |
-| Living-cost inflation | PK 8%, IN 6%, others 3% | Illustrative |
-| Investment return (by reporting currency) | PKR 12%, INR 10%, USD 6%, AUD 6%, GBP 5%, EUR 5% | Illustrative nominal returns — not predictions, recommendations or guaranteed rates |
-| Contribution increase | 5% a year | Illustrative |
-| Contingency | 5% | Illustrative |
-| Exchange-rate drift | 0% | Neutral starting point |
-| Scenario spread | ± 3 percentage points of return | Lower/higher return scenarios on the web page, labelled illustrative |
+| College-entry age | 18 | — |
+| Scholarship / part-time work | 0% | — |
+| Investment return | by reporting currency (PKR 12%, INR 10%, USD 6%, GBP 5%, EUR 5%, AUD 6%) | planning assumption, `assumptions.returnsByCurrency` |
+| Yearly increase in savings | 0% | — |
+| Fee increase | country × fee status × subject group where evidence exists, else country default | `tuitionInflation`, see SOURCES.md |
+| Living-cost increase | country default | `countries[].livingInflation` |
 
-## 6. Known limitations
+## 10. Excel status
 
-- Coverage is partial (see `SOURCES.md` → *Known coverage gaps*). Many cells are single-institution benchmarks.
-- Some fees are year-1 values where later years differ (e.g. AKU, Manchester Medicine — the latter is course-weighted).
-- Programme-specific fees at some US universities and semester contributions at some German universities were not verified.
-- Pakistan and India living-cost benchmarks are partial (accommodation only / accommodation and mess).
-- Ages are whole years; costs and contributions are annual (contributions use a monthly timing factor).
-- Taxes on returns, student loans, part-time work, currency hedging and fee changes mid-course are not modelled.
-- Professional qualifications (ACCA, CPA, CA) have no verified records yet; parents enter their own components
-  (registration, exam fees, tuition-provider fees, exemptions, any degree studied alongside).
+The Excel workbook (`frontend/downloads/Children_Education_Fund_Calculator.xlsx`) still follows the **previous**
+(v1) method and inputs and has been removed from the page until it is rebuilt with this method. Rebuilding it needs
+Python 3 + openpyxl (`tools/edu-calc/build.py`, to be updated for dataset v2) and, for the automatic Excel-vs-web check,
+LibreOffice and Node.js.

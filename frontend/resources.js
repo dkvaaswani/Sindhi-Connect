@@ -11,60 +11,69 @@
    {
      title: "Resource title",
      description: "One or two sentences about it.",
-     category: "history",        // one of the category ids below
+     category: "history",        // a topic id: finance, business, history,
+                                 // literature, personalities or development
      author: "Author or source",
      year: "2024",               // optional; used by "Newest" sort
-     type: "PDF",                // PDF, Book, Article, Report, Video...
+     type: "Article",            // decides where it appears on the Resources page:
+                                 //   Article / Guide / Report -> Educational Articles
+                                 //   Book                     -> Knowledge Books
+                                 //   Video / Podcast / Audio  -> Video & Podcast Library
+                                 //                               (and the Videos & Podcasts page)
      thumbnail: "",              // optional image, e.g. "assets/resources/cover.jpg"
                                  // leave empty for a designed cover
      file: "",                   // PDF in assets/resources/, or a web link
-     featured: true              // true = shown first and marked "Featured"
+                                 // (e.g. a YouTube link for a video)
+     featured: true              // true = shown first, marked "Featured", and
+                                 // eligible for the home page and spotlight
    }
 
    - Local files (e.g. "assets/resources/book.pdf") get both
-     "Read now" and "Download" buttons.
-   - Web links (https://...) get a "Read now" button only.
+     "Read more" and "Download" buttons, and also appear under
+     Resources > Downloadable Resources.
+   - Web links (https://...) get a "Read more" button only.
    - Add `download: false` to hide the Download button.
-   - A category with no resources shows "More knowledge is
-     coming soon." automatically.
+   - A topic or resource type with nothing in it shows a
+     "coming soon" message automatically.
    ========================================================= */
 window.SC_KNOWLEDGE = {
+  // Topics: these match the Knowledge Hub menu (link: #topic-<id>)
   categories: [
     {
-      id: 'books',
-      name: 'Knowledge Books',
-      description: 'Books, PDFs and useful reading material.',
-      icon: 'book'
+      id: 'finance',
+      name: 'Finance & Money Matters',
+      description: 'Budgeting, saving, investing and financial awareness for families.',
+      icon: 'growth'
+    },
+    {
+      id: 'business',
+      name: 'Business & Professional Knowledge',
+      description: 'Accounting, audit, tax, advisory and career guidance in simple language.',
+      icon: 'briefcase'
     },
     {
       id: 'history',
       name: 'Sindhi History & Heritage',
-      description: 'Historical information, personalities, places and cultural heritage.',
+      description: 'Historical information, places, traditions and cultural heritage.',
       icon: 'landmark'
+    },
+    {
+      id: 'literature',
+      name: 'Language & Literature',
+      description: 'Sindhi language, poetry, literature and the stories they carry.',
+      icon: 'feather'
     },
     {
       id: 'personalities',
       name: 'Sindhi Personalities',
-      description: 'Biographies and stories of notable Sindhi personalities.',
+      description: 'Biographies and life stories of inspiring Sindhi personalities.',
       icon: 'person'
     },
     {
-      id: 'culture',
-      name: 'Culture & Literature',
-      description: 'Sindhi literature, poetry, traditions, language and cultural resources.',
-      icon: 'feather'
-    },
-    {
-      id: 'finance',
-      name: 'Finance & Awareness',
-      description: 'Simple financial education: saving, investment and personal finance.',
-      icon: 'growth'
-    },
-    {
-      id: 'general',
-      name: 'General Knowledge',
-      description: 'Useful articles, guides, reports and informative resources.',
-      icon: 'globe'
+      id: 'development',
+      name: 'Personal Development',
+      description: 'Learning habits, confidence and growth for students and professionals.',
+      icon: 'sprout'
     }
   ],
 
@@ -94,7 +103,7 @@ window.SC_KNOWLEDGE = {
     {
       title: 'Shah Jo Risalo',
       description: 'An introduction to the celebrated collection of Shah Latif\'s poetry and the folk tales it retells.',
-      category: 'culture',
+      category: 'literature',
       author: 'Wikipedia',
       year: '',
       type: 'Article',
@@ -127,7 +136,7 @@ window.SC_KNOWLEDGE = {
     {
       title: 'Sindhi Language',
       description: 'Where Sindhi comes from, where it is spoken today, and the scripts used to write it.',
-      category: 'culture',
+      category: 'literature',
       author: 'Wikipedia',
       year: '',
       type: 'Article',
@@ -138,7 +147,7 @@ window.SC_KNOWLEDGE = {
     {
       title: 'Sindh',
       description: 'Geography, people, cities and economy: a general guide to the land of the Indus.',
-      category: 'general',
+      category: 'history',
       author: 'Wikipedia',
       year: '',
       type: 'Article',

@@ -1,228 +1,102 @@
-/* Engine tests — run with:  node --test tests/edu-calc/
-   No dependencies. Uses the real dataset plus small synthetic datasets
-   whose answers can be checked by hand. */
+/* Engine tests for the Children's Future Education Fund calculator (dataset/engine v2).
+   Run with Node 18+:  node --test tests/edu-calc/engine.test.js
+   No dependencies. The same checks were run in the browser for the v2 release (TEST_REPORT.md). */
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
 const fs = require('node:fs');
-const E = require('../../frontend/edu-calc/calc-engine.js');
+const path = require('node:path');
+const vm = require('node:vm');
 
-const REAL = JSON.parse(fs.readFileSync(path.join(__dirname, '../../data/education/education-costs.json'), 'utf8'));
+const root = path.join(__dirname, '..', '..');
+const E = require(path.join(root, 'frontend', 'edu-calc', 'calc-engine.js'));
+const ctx = { window: {} };
+vm.runInNewContext(fs.readFileSync(path.join(root, 'frontend', 'edu-calc', 'education-data.js'), 'utf8'), ctx);
+const D = ctx.window.EDU_DATA;
 
-// Synthetic dataset: one country, flat 10,000 USD tuition, 2,000 living, no one-time costs, fee year = plan year.
-function synth(extra) {
-  return Object.assign({
-    planStartYear: 2026,
-    exchangeRates: { rates: { USD: 1, PKR: 280, GBP: 0.75 } },
-    countries: [{ name: 'Testland', currency: 'USD', defaultCategory: 'Intl', defaultDuration: 4 },
-                { name: 'Rupeeland', currency: 'PKR', defaultCategory: 'Intl', defaultDuration: 4 }],
-    courseDurations: [],
-    livingBenchmarks: [{ country: 'Testland', studentCategory: 'All', currency: 'USD', accommodation: 2000 },
-                       { country: 'Rupeeland', studentCategory: 'All', currency: 'PKR', accommodation: 0 }],
-    records: [
-      { id: 'T1', country: 'Testland', qualification: 'Q', studentCategory: 'Intl', university: 'U1', tuition: 9000,
-        currency: 'USD', feeYearStart: 2026, durationYears: 4, includeInAverage: true },
-      { id: 'T2', country: 'Testland', qualification: 'Q', studentCategory: 'Intl', university: 'U2', tuition: 11000,
-        currency: 'USD', feeYearStart: 2026, durationYears: 4, includeInAverage: true },
-      { id: 'T3', country: 'Testland', qualification: 'Q', studentCategory: 'Intl', university: 'U3 (old)', tuition: 99999,
-        currency: 'USD', feeYearStart: 2020, durationYears: 4, includeInAverage: false },
-      { id: 'P1', country: 'Rupeeland', qualification: 'Q', studentCategory: 'Intl', university: 'PU', tuition: 2800000,
-        currency: 'PKR', feeYearStart: 2026, durationYears: 4, includeInAverage: true }
-    ]
-  }, extra || {});
+const COUNTRIES = D.countries.map((c) => c.name);
+const QUALS = D.qualifications.map((q) => q.name);
+const A = (o) => Object.assign({ reportingCurrency: 'USD', returnRate: 0.06, savingsIncrease: 0, coverage: 0 }, o || {});
+const close = (a, b, tol) => Math.abs(a - b) <= Math.max(1e-6, Math.abs(b) * (tol || 1e-9));
+
+function invariants(label, fam) {
+  fam.children.forEach((k) => {
+    if (!k.ok) return;
+    const s = k.summary;
+    assert.ok(s.firstYearSaving >= -1e-9 && s.lumpNow >= -1e-9, label + ': negative saving');
+    let bal = s.lumpNow;
+    k.rows.forEach((r) => {
+      assert.ok(bal - r.expense >= -1e-6 * Math.max(1, r.expense), label + ': fund below zero in ' + r.year);
+      bal = r.closing;
+    });
+    const parts = Object.values(s.byGroup).reduce((a, b) => a + b, 0);
+    assert.ok(close(parts, s.totalCost), label + ': breakdown does not add up');
+  });
+  const sched = fam.years.reduce((a, y) => a + y.expense, 0);
+  assert.ok(close(sched, fam.totals.totalCost), label + ': schedule does not add up');
 }
 
-const A0 = { returnRate: 0, tuitionInflation: 0, livingInflation: 0, contributionEscalation: 0, contingency: 0, fxDrift: 0,
-  contributionMode: 'monthly' };
-const kid = (o) => Object.assign({ country: 'Testland', qualification: 'Q', benchmark: 'average', age: 10, entryAge: 18,
-  duration: 4, savings: 0, monthly: 0, annual: 0, scholarshipPct: 0, scholarshipFixed: 0, otherFunding: 0 }, o);
-const close = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= (tol || 1e-6), (msg || '') + ` expected ${b}, got ${a}`);
-
-test('1. one child, eight years until college (zero return: requirement = cost / contribution years)', () => {
-  const r = E.projectChild(synth(), kid(), A0, 'USD');
-  assert.equal(r.summary.yearsToCollege, 8);
-  close(r.summary.totalCost, 4 * 12000);           // average tuition 10,000 + living 2,000
-  assert.equal(r.summary.contributionYears, 11);   // years 1..11 (last cost paid at start of year 12)
-  // with zero return the binding constraint is the first payment (12,000 needed after 8 years)
-  // and cumulative needs: 12k by t=8, 24k by t=9, 36k by t=10, 48k by t=11 -> max(12/8, 24/9, 36/10, 48/11) = 48/11
-  close(r.summary.requiredAnnualFirstYear, 48000 / 11, 1e-6);
-  r.rows.forEach((row) => assert.ok(row.closingRequired > -1e-6));
+test('every offered course has a published or estimated fee, and unavailable ones are flagged', () => {
+  for (const c of COUNTRIES) for (const q of QUALS) for (const nat of ['Pakistan', 'UK', 'Germany', 'USA']) {
+    const d = E.courseDuration(D, c, q);
+    const fam = E.projectFamily(D, { numChildren: 1, family: { nationality: nat, residence: 'Qatar' }, assumptions: A(),
+      children: [{ age: 8, entryAge: 18, country: c, qualification: q, overrides: {} }] });
+    const k = fam.children[0];
+    assert.equal(k.ok, d.available, c + ' / ' + q);
+    if (k.ok) assert.equal(k.summary.hasMissing, false, c + ' / ' + q + ' / ' + nat + ' has missing costs');
+    invariants(c + ' / ' + q + ' / ' + nat, fam);
+  }
 });
 
-test('2. two children with different ages run on their own timelines', () => {
-  const f = E.projectFamily(synth(), { numChildren: 2, reportingCurrency: 'USD', assumptions: A0,
-    children: [kid({ age: 5 }), kid({ age: 12 })] });
-  assert.equal(f.children[0].summary.yearsToCollege, 13);
-  assert.equal(f.children[1].summary.yearsToCollege, 6);
-  close(f.totals.requiredAnnualFirstYear, f.children[0].summary.requiredAnnualFirstYear + f.children[1].summary.requiredAnnualFirstYear);
+test('1–4 children, all ages, coverage, zero and negative returns', () => {
+  const ages = [0, 3, 7, 12, 16, 17, 18];
+  for (let n = 1; n <= 4; n++) for (const cov of [0, 0.2, 0.5, 1]) for (const r of [0, 0.06, -0.02, 0.15]) {
+    const kids = [0, 1, 2, 3].map((i) => ({ age: ages[(i * 2 + n) % ages.length], entryAge: 18,
+      country: COUNTRIES[(i + n) % 6], qualification: QUALS[(i * 5 + n) % QUALS.length], overrides: {} }));
+    invariants('n' + n + ' c' + cov + ' r' + r, E.projectFamily(D, { numChildren: n, family: { nationality: 'India', residence: 'India' },
+      assumptions: A({ reportingCurrency: 'GBP', returnRate: r, savingsIncrease: 0.03, coverage: cov }), children: kids }));
+  }
 });
 
-test('3. four children are all projected', () => {
-  const f = E.projectFamily(synth(), { numChildren: 4, reportingCurrency: 'USD', assumptions: A0,
-    children: [kid({ age: 2 }), kid({ age: 6 }), kid({ age: 9 }), kid({ age: 15 })] });
-  assert.equal(f.children.length, 4);
-  assert.ok(f.children.every((c) => c.ok));
-  close(f.totals.totalCost, 4 * 48000);
+test('scholarship / part-time work reduces eligible costs exactly once', () => {
+  const base = { numChildren: 1, family: { nationality: 'Pakistan', residence: 'Pakistan' },
+    children: [{ age: 10, entryAge: 18, country: 'UK', qualification: 'Law', overrides: {} }] };
+  const t0 = E.projectFamily(D, Object.assign({}, base, { assumptions: A({ reportingCurrency: 'GBP', returnRate: 0.05 }) })).totals;
+  const t20 = E.projectFamily(D, Object.assign({}, base, { assumptions: A({ reportingCurrency: 'GBP', returnRate: 0.05, coverage: 0.2 }) })).totals;
+  assert.ok(close(t20.totalCost, t0.totalCost - 0.2 * (t0.totalCost - t0.byGroup.visaTravel)));
+  const t100 = E.projectFamily(D, Object.assign({}, base, { assumptions: A({ reportingCurrency: 'GBP', returnRate: 0.05, coverage: 1 }) })).totals;
+  assert.ok(close(t100.totalCost, t0.byGroup.visaTravel));
 });
 
-test('4. changing college-entry age from 18 to 21 delays costs and lowers the monthly need', () => {
-  const r18 = E.projectChild(synth(), kid({ entryAge: 18 }), A0, 'USD');
-  const r21 = E.projectChild(synth(), kid({ entryAge: 21 }), A0, 'USD');
-  assert.equal(r21.summary.yearsToCollege, 11);
-  assert.ok(r21.summary.requiredMonthlyFirstYear < r18.summary.requiredMonthlyFirstYear);
+test('zero return: yearly saving = total cost / saving years', () => {
+  const k = E.projectChild(D, { age: 10, entryAge: 18, country: 'Pakistan', qualification: 'Computer Science', overrides: {} },
+    { nationality: 'Pakistan', residence: 'Pakistan' }, A({ reportingCurrency: 'PKR', returnRate: 0 }));
+  assert.ok(close(k.summary.firstYearSaving, k.summary.totalCost / k.summary.savingYears));
 });
 
-test('5. child already of college age: immediate funding, no division by zero', () => {
-  const r = E.projectChild(synth(), kid({ age: 19, entryAge: 18 }), A0, 'USD');
-  assert.equal(r.summary.yearsToCollege, 0);
-  assert.equal(r.summary.immediate, true);
-  close(r.summary.requiredLumpNow, 12000);         // first year cannot be met by future contributions
-  close(r.summary.requiredAnnualFirstYear, 12000); // years 2-4 met by contributions in years 1-3
-  assert.ok(Number.isFinite(r.summary.requiredMonthlyFirstYear));
+test('child already at college age needs the first year now, never a negative saving', () => {
+  const k = E.projectChild(D, { age: 18, entryAge: 18, country: 'Pakistan', qualification: 'Computer Science', overrides: {} },
+    { nationality: 'Pakistan', residence: 'Pakistan' }, A({ reportingCurrency: 'PKR', returnRate: 0.12 }));
+  assert.ok(close(k.summary.lumpNow, k.rows[0].expense));
+  assert.ok(k.summary.firstYearSaving >= 0);
 });
 
-test('6. zero investment return: projection is plain addition', () => {
-  const r = E.projectChild(synth(), kid({ savings: 1000, annual: 500 }), Object.assign({}, A0, { contributionMode: 'annual' }), 'USD');
-  close(r.summary.fvSavingsAtStart, 1000);
-  close(r.summary.fvContributionsAtStart, 500 * 8);
+test('fee status, visa and duration follow nationality, country and qualification', () => {
+  const uk = E.resolveCosts(D, { country: 'UK', qualification: 'Computer Science', overrides: {} }, { nationality: 'UK', residence: 'UK' });
+  assert.equal(uk.feeStatus, 'domestic');
+  assert.equal(uk.items.visaApplication.amount, 0);
+  const intl = E.resolveCosts(D, { country: 'UK', qualification: 'Computer Science', overrides: {} }, { nationality: 'Pakistan', residence: 'Qatar' });
+  assert.equal(intl.feeStatus, 'international');
+  assert.ok(intl.items.visaApplication.amount > 0);
+  assert.equal(E.courseDuration(D, 'UK', 'Medicine (MBBS/MD)').years, 5);
+  assert.equal(E.courseDuration(D, 'USA', 'Medicine (MBBS/MD)').years, 8);
+  assert.equal(E.courseDuration(D, 'UK', 'CPA').available, false);
 });
 
-test('7. positive return reduces the requirement and grows savings', () => {
-  const a = Object.assign({}, A0, { returnRate: 0.08 });
-  const r = E.projectChild(synth(), kid({ savings: 1000 }), a, 'USD');
-  close(r.summary.fvSavingsAtStart, 1000 * Math.pow(1.08, 8), 1e-6);
-  const r0 = E.projectChild(synth(), kid({ savings: 1000 }), A0, 'USD');
-  assert.ok(r.summary.requiredAnnualFirstYear < r0.summary.requiredAnnualFirstYear);
-});
-
-test('8. negative return is handled and increases the requirement', () => {
-  const a = Object.assign({}, A0, { returnRate: -0.02 });
-  const r = E.projectChild(synth(), kid(), a, 'USD');
-  assert.ok(r.ok);
-  const r0 = E.projectChild(synth(), kid(), A0, 'USD');
-  assert.ok(r.summary.requiredAnnualFirstYear > r0.summary.requiredAnnualFirstYear);
-  r.rows.forEach((row) => assert.ok(row.closingRequired > -1e-6));
-});
-
-test('9. zero inflation keeps every academic year the same', () => {
-  const r = E.projectChild(synth(), kid(), A0, 'USD');
-  const exp = r.rows.filter((x) => x.academicYear).map((x) => x.expense);
-  exp.forEach((v) => close(v, 12000));
-});
-
-test('9b. inflation compounds separately for tuition and living', () => {
-  const a = Object.assign({}, A0, { tuitionInflation: 0.1, livingInflation: 0.0 });
-  const r = E.projectChild(synth(), kid(), a, 'USD');
-  const first = r.rows[8];
-  close(first.tuition, 10000 * Math.pow(1.1, 8), 1e-6);
-  close(first.living, 2000, 1e-9);
-});
-
-test('10. existing savings that cover everything give zero requirement (never negative)', () => {
-  const r = E.projectChild(synth(), kid({ savings: 100000 }), A0, 'USD');
-  assert.equal(r.summary.requiredAnnualFirstYear, 0);
-  assert.equal(r.summary.requiredLumpNow, 0);
-  close(r.summary.coverage, 1);
-  assert.ok(r.summary.surplusOrGap > 0);
-});
-
-test('11. scholarships reduce the cost', () => {
-  const r = E.projectChild(synth(), kid({ scholarshipPct: 0.5, scholarshipFixed: 1000 }), A0, 'USD');
-  close(r.summary.totalCost, 4 * (12000 - 5000 - 1000));
-});
-
-test('12. children attending different countries', () => {
-  const f = E.projectFamily(synth(), { numChildren: 2, reportingCurrency: 'USD', assumptions: A0,
-    children: [kid(), kid({ country: 'Rupeeland' })] });
-  close(f.children[1].summary.totalCost, 4 * 10000);   // 2.8m PKR / 280 = 10,000 USD
-});
-
-test('13. reporting currency differs from the fee currency', () => {
-  const r = E.projectChild(synth(), kid(), A0, 'PKR');
-  close(r.summary.totalCost, 4 * 12000 * 280, 1e-3);
-  const drift = E.projectChild(synth(), kid(), Object.assign({}, A0, { fxDrift: 0.05 }), 'PKR');
-  close(drift.rows[8].expense, 12000 * 280 * Math.pow(1.05, 8), 1e-3);
-});
-
-test('14. missing university fee records: no crash, flagged, user estimate used', () => {
-  const r = E.projectChild(synth(), kid({ qualification: 'Nothing here' }), A0, 'USD');
-  assert.ok(r.ok);
-  assert.equal(r.costs.hasTuitionData, false);
-  const r2 = E.projectChild(synth(), kid({ qualification: 'Nothing here', overrides: { tuition: 5000 } }), A0, 'USD');
-  assert.equal(r2.costs.hasTuitionData, true);
-  assert.deepEqual(r2.costs.overridden, ['tuition']);
-  close(r2.summary.totalCost, 4 * 7000);
-});
-
-test('15. one-year programme vs longer programme; fractional final year', () => {
-  const one = E.projectChild(synth(), kid({ duration: 1 }), A0, 'USD');
-  close(one.summary.totalCost, 12000);
-  const half = E.projectChild(synth(), kid({ duration: 5.5 }), A0, 'USD');
-  close(half.summary.totalCost, 5.5 * 12000);
-  const zero = E.projectChild(synth(), kid({ duration: 0 }), A0, 'USD');
-  close(zero.summary.totalCost, 0);
-  assert.equal(zero.summary.requiredAnnualFirstYear, 0);
-});
-
-test('16. expenses fall in each academic year, not all at the start', () => {
-  const r = E.projectChild(synth(), kid(), A0, 'USD');
-  const years = r.rows.filter((x) => x.expense > 0).map((x) => x.p);
-  assert.deepEqual(years, [9, 10, 11, 12]);
-});
-
-test('17. combined family schedule adds children year by year', () => {
-  const f = E.projectFamily(synth(), { numChildren: 2, reportingCurrency: 'USD', assumptions: A0,
-    children: [kid({ age: 10 }), kid({ age: 12 })] });
-  const y9 = f.years[8];
-  close(y9.expense, 12000 + 12000);  // child 1 year 1 and child 2 year 3
-  close(f.years.reduce((s, y) => s + y.expense, 0), f.totals.totalCost);
-});
-
-test('18. invalid and missing inputs are rejected with messages', () => {
-  const bad = E.projectChild(synth(), kid({ age: -1, entryAge: null, duration: 20 }), A0, 'USD');
-  assert.equal(bad.ok, false);
-  assert.ok(bad.errors.length >= 3);
-  const badA = E.projectChild(synth(), kid(), Object.assign({}, A0, { returnRate: -1 }), 'USD');
-  assert.equal(badA.ok, false);
-});
-
-test('averages exclude flagged records and report median/range', () => {
-  const s = E.benchmarkStats(synth(), 'Testland', 'Q', 'Intl');
-  assert.equal(s.count, 2);
-  close(s.avgTuition, 10000); close(s.medianTuition, 10000);
-  assert.equal(s.minTuition, 9000); assert.equal(s.maxTuition, 11000);
-  const single = E.benchmarkStats(synth(), 'Rupeeland', 'Q', 'Intl');
-  assert.equal(single.single, true);
-});
-
-test('monthly timing factor: 12 end-of-month payments at monthly-equivalent rate', () => {
-  const r = 0.12, rm = Math.pow(1.12, 1 / 12) - 1;
-  let fv = 0; for (let m = 1; m <= 12; m++) fv += Math.pow(1 + rm, 12 - m);
-  close(E.monthlyTimingFactor(r) * 12, fv, 1e-9);
-});
-
-test('real dataset: every core benchmark resolves and projects', () => {
-  REAL.countries.forEach((c) => {
-    ['Computer Science', 'Mechanical Engineering', 'Business Administration'].forEach((q) => {
-      const cats = E.categoriesFor(REAL, c.name, q);
-      cats.forEach((cat) => {
-        const r = E.projectChild(REAL, kid({ country: c.name, qualification: q, studentCategory: cat, duration: 4 }),
-          Object.assign({}, A0, { returnRate: 0.06, tuitionInflation: 0.05, livingInflation: 0.03 }), 'USD');
-        assert.ok(r.ok, c.name + ' ' + q);
-        assert.ok(r.summary.totalCost > 0, c.name + ' ' + q + ' ' + cat);
-      });
-    });
-  });
-});
-
-test('real dataset: requirement keeps the fund non-negative', () => {
-  const a = { returnRate: 0.12, tuitionInflation: 0.1, livingInflation: 0.08, contributionEscalation: 0.05, contingency: 0.05,
-    fxDrift: 0, contributionMode: 'monthly' };
-  const r = E.projectChild(REAL, kid({ country: 'Pakistan', qualification: 'Medicine — MBBS/MD', studentCategory: 'Pakistani national',
-    age: 6, duration: 5, savings: 200000, monthly: 10000 }), a, 'PKR');
-  r.rows.forEach((row) => {
-    const after = row.openingRequired + row.otherFunding - row.expense;
-    assert.ok(after > -1e-3, 'year ' + row.p + ' ' + after);
-  });
+test('country comparison matches the plan for the same country', () => {
+  const fam = { nationality: 'Pakistan', residence: 'Pakistan' };
+  const child = { age: 10, entryAge: 18, country: 'UK', qualification: 'Law', overrides: {} };
+  const plan = E.projectChild(D, child, fam, A({ reportingCurrency: 'GBP', returnRate: 0.05 }));
+  const cmp = E.compareCountries(D, child, fam, A({ reportingCurrency: 'GBP', returnRate: 0.05 }), ['UK'])[0];
+  assert.ok(close(cmp.totalCost, plan.summary.totalCost));
 });

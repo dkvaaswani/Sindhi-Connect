@@ -20,18 +20,26 @@ sindhi-connect/
 └── CLAUDE.md            # Project rules
 ```
 
+## Pages
+
+The site is one `index.html`. The menu shows one "page" at a time (sections grouped by `data-page`): Home, About, Knowledge Hub, Resources, Videos & Podcasts and Contact Us. Links like `#topic-finance` open the Knowledge Hub filtered to that topic.
+
 ## Updating content
 
-- **Knowledge Hub:** add an entry to `frontend/resources.js` (instructions are at the top of the file). Put PDFs and cover images in `frontend/assets/resources/`.
+- **Articles, books, PDFs, videos, podcasts:** add an entry to `frontend/resources.js` (instructions are at the top of the file). One entry automatically appears in the Knowledge Hub, the right Resources section (by `type`), the home page (if `featured`), and the Videos & Podcasts page (if `type` is Video or Podcast). Put PDFs and cover images in `frontend/assets/resources/`.
 - **Everything else:** edit `frontend/index.html`.
+
+There is no database or admin panel: content lives in the files above and goes live when pushed to GitHub.
 
 Push to GitHub and the live site updates automatically.
 
 ## Education Fund Calculator
 
-`frontend/education-calculator.html` estimates future university costs for up to four children and the monthly saving
-needed. Its fee data lives in `data/education/education-costs.json`; after editing it run `python3 tools/edu-calc/build.py`
-to regenerate the page data, the Excel workbook and the source register. Full details: `docs/education-calculator/`.
+`frontend/education-calculator.html` estimates what each child's university course may cost, how much the family may
+need to save each year, and how the cost changes between six study countries. Its fee data lives in
+`data/education/education-costs.json`; after editing it run
+`powershell -ExecutionPolicy Bypass -File tools/edu-calc/build-data.ps1` to regenerate the page data and the source
+register. The Excel version is being rebuilt for the simplified method. Full details: `docs/education-calculator/`.
 
 ## Hosting
 

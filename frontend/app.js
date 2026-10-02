@@ -35,8 +35,9 @@
   const TITLES = {
     about: 'About',
     'knowledge-hub': 'Knowledge Hub',
-    videos: 'Videos',
-    join: 'Join & Contact'
+    resources: 'Resources',
+    videos: 'Videos & Podcasts',
+    join: 'Contact Us'
   };
   const SITE = 'Sindhi Connect';
   const instant = { behavior: 'instant' };
@@ -56,7 +57,7 @@
   }
 
   function markNav(page) {
-    document.querySelectorAll('.site-nav a, .footer-links a').forEach((link) => {
+    document.querySelectorAll('.nav-list > li > a, .footer-links a').forEach((link) => {
       if (pageOf(link.hash) === page) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
@@ -86,6 +87,9 @@
     // Page links start at the top; links to a part of a page (e.g. #contact) go there
     if (!target || target === first) window.scrollTo({ top: 0, ...instant });
     else target.scrollIntoView(instant);
+
+    // lets other parts react to deep links (e.g. #topic-finance filters the Knowledge Hub)
+    document.dispatchEvent(new CustomEvent('sc:navigate', { detail: { hash: hash || '' } }));
   }
 
   document.addEventListener('click', (event) => {
@@ -98,19 +102,60 @@
 
   window.addEventListener('popstate', () => show(location.hash));
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-  show(location.hash);
+  // wait until the Knowledge Hub has built its cards, so deep links can find them
+  document.addEventListener('DOMContentLoaded', () => show(location.hash));
 })();
 
 /* =========================================================
-   Mobile menu — close it after a link is tapped
+   Navigation — dropdown menus and the mobile menu.
+   Desktop: menus open on hover, or by clicking the arrow
+   button (keyboard friendly). Mobile: tap the arrow to
+   expand a menu inside the slide-down panel.
    ========================================================= */
 (function () {
   'use strict';
 
   const toggle = document.getElementById('nav-toggle');
-  if (!toggle) return;
+  const menus = Array.from(document.querySelectorAll('.has-menu'));
+
+  function setOpen(menu, open) {
+    menu.classList.toggle('is-open', open);
+    menu.querySelector('.submenu-toggle').setAttribute('aria-expanded', String(open));
+  }
+
+  function closeAll(except) {
+    menus.forEach((menu) => { if (menu !== except) setOpen(menu, false); });
+  }
+
+  menus.forEach((menu) => {
+    const button = menu.querySelector('.submenu-toggle');
+    button.addEventListener('click', () => {
+      const open = !menu.classList.contains('is-open');
+      closeAll(menu);
+      setOpen(menu, open);
+    });
+    menu.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && menu.classList.contains('is-open')) {
+        setOpen(menu, false);
+        button.focus();
+      }
+    });
+    // keyboard users: close once focus moves out of the menu
+    menu.addEventListener('focusout', (event) => {
+      if (!menu.contains(event.relatedTarget) && !toggle.checked) setOpen(menu, false);
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.has-menu')) closeAll();
+  });
+
+  // after choosing a page, close the dropdowns and the mobile menu
   document.querySelectorAll('.site-nav a').forEach((link) => {
-    link.addEventListener('click', () => { toggle.checked = false; });
+    link.addEventListener('click', () => {
+      closeAll();
+      if (toggle) toggle.checked = false;
+    });
   });
 })();
 
@@ -175,6 +220,8 @@
     person: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
     feather: '<svg viewBox="0 0 24 24"><path d="M20.2 3.8a6 6 0 0 0-8.5 0L5 10.5V19h8.5l6.7-6.7a6 6 0 0 0 0-8.5Z"/><path d="M16 8 2 22"/><path d="M17.5 15H9"/></svg>',
     growth: '<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
+    briefcase: '<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>',
+    sprout: '<svg viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 12c0-4 3-7 8-7 0 4-3 7-8 7Z"/><path d="M12 14c0-3-2.5-5.5-7-5.5 0 3 2.5 5.5 7 5.5Z"/></svg>',
     globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18Z"/></svg>'
   };
 
@@ -240,6 +287,7 @@
       const count = resources.filter((r) => r.category === cat.id).length;
       const button = make('button', 'kh-cat');
       button.type = 'button';
+      button.id = 'topic-' + cat.id; // target of menu links like #topic-finance
       button.dataset.cat = cat.id;
       button.setAttribute('aria-pressed', 'false');
       button.append(
@@ -313,7 +361,7 @@
     const href = safeUrl(r.file);
     if (href) {
       const actions = make('div', 'kh-actions');
-      const verb = /video|audio|image|gallery/i.test(r.type || '') ? 'View' : 'Read now';
+      const verb = /video|podcast|audio|image|gallery/i.test(r.type || '') ? 'Watch / listen' : 'Read more';
       const open = make('a', 'btn btn-secondary btn-sm', verb);
       open.href = href;
       open.target = '_blank';
@@ -354,7 +402,7 @@
       });
       box.append(
         make('h4', null, 'No resources match your search.'),
-        make('p', null, 'Try a different word, or browse all categories.'),
+        make('p', null, 'Try a different word, or browse all topics.'),
         reset
       );
       return;
@@ -364,7 +412,7 @@
     contact.href = '#contact';
     box.append(
       make('h4', null, 'More knowledge is coming soon.'),
-      make('p', null, 'We are preparing new resources for this category. Have a book or article worth sharing? Let us know.'),
+      make('p', null, 'We are preparing new resources for this topic. Have a book or article worth sharing? Let us know.'),
       contact
     );
   }
@@ -398,8 +446,70 @@
     render();
   });
 
+  /* ---------- lists on other pages (Home, Resources, Videos) ---------- */
+  // <div data-kh-list="articles"> gets a card for every matching resource.
+  // If it has a .kh-empty block, that shows when the list is empty;
+  // otherwise the whole box hides until there is something to show.
+  const LISTS = {
+    featured: (r) => !!r.featured,
+    articles: (r) => /article|guide|report/i.test(r.type || ''),
+    books: (r) => /book/i.test(r.type || ''),
+    downloads: (r) => {
+      const href = safeUrl(r.file);
+      return !!href && r.download !== false && isOwnFile(href);
+    },
+    media: (r) => /video|podcast|audio/i.test(r.type || '')
+  };
+
+  function renderLists() {
+    document.querySelectorAll('[data-kh-list]').forEach((box) => {
+      const test = LISTS[box.dataset.khList];
+      if (!test) return;
+      const limit = Number(box.dataset.limit) || Infinity;
+      const list = resources.filter(test).sort(SORTS.featured).slice(0, limit);
+      const grid = box.querySelector('.kh-grid');
+      const empty = box.querySelector('.kh-empty');
+      grid.replaceChildren(...list.map(resourceCard));
+      grid.hidden = list.length === 0;
+      if (empty) empty.hidden = list.length > 0;
+      else box.hidden = list.length === 0;
+    });
+
+    document.querySelectorAll('[data-kh-count]').forEach((node) => {
+      const test = LISTS[node.dataset.khCount];
+      const count = test ? resources.filter(test).length : 0;
+      node.textContent = count ? plural(count) : 'Coming soon';
+    });
+  }
+
+  // The first featured resource, shown large at the top of the Knowledge Hub
+  function renderSpotlight() {
+    const box = hub.querySelector('.kh-spotlight');
+    if (!box) return;
+    const pick = resources.filter((r) => r.featured).sort(SORTS.featured)[0];
+    if (!pick) {
+      box.hidden = true;
+      return;
+    }
+    const card = resourceCard(pick).firstElementChild;
+    card.classList.add('kh-card-wide');
+    box.append(make('p', 'eyebrow', 'Featured resource'), card);
+  }
+
+  // Menu links like #topic-finance open the Knowledge Hub filtered to that topic
+  document.addEventListener('sc:navigate', (event) => {
+    // the main "Knowledge Hub" link always opens the full library
+    if (event.detail.hash === '#knowledge-hub' && state.category !== 'all') setCategory('all');
+    const match = /^#topic-(.+)$/.exec(event.detail.hash);
+    if (!match || !catById.has(match[1])) return;
+    setCategory(match[1]);
+    el.library.scrollIntoView({ behavior: 'instant', block: 'start' });
+  });
+
   renderCategories();
   render();
+  renderSpotlight();
+  renderLists();
 })();
 
 /* =========================================================

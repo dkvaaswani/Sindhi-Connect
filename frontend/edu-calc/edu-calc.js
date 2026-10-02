@@ -1,5 +1,5 @@
 /* =========================================================
-   Children's Future Education Fund Calculator — page logic.
+   Children's Future Education Fund Calculator — page logic (v2).
    Data: education-data.js (window.EDU_DATA). Maths: calc-engine.js.
    All state lives in this page; nothing is sent anywhere.
    DOM is built with createElement/textContent (no innerHTML).
@@ -12,16 +12,40 @@
   if (!DATA0 || !E || !document.getElementById('ec-form')) return;
 
   const MAX_KIDS = 4;
-  const STORE_KEY = 'sc-edu-calc-plan';
+  const STORE_KEY = 'sc-edu-calc-plan-v2';
+  const COUNTRIES = DATA0.countries.map((c) => c.name);
+  const PLACES = DATA0.places.map((p) => p.name);
+  const QUALS = DATA0.qualifications.map((q) => q.name);
+
   const COST_LABELS = {
-    tuition: 'Tuition', otherMandatoryAnnual: 'Other mandatory fees', accommodation: 'Accommodation', food: 'Food',
-    transport: 'Transport', healthInsurance: 'Health insurance', books: 'Books and equipment', personal: 'Personal and other living',
-    combinedLiving: 'Living costs (combined estimate)', oneTimeAdmission: 'Admission and registration (one-time)',
-    visaApplication: 'Visa and application (one-time)', travelRelocation: 'Travel and relocation (one-time)',
-    otherOneTime: 'Other one-time costs'
+    tuition: 'Tuition fees', preTuition: 'Tuition fees', accommodation: 'Accommodation', food: 'Food',
+    transport: 'Local transport', healthInsurance: 'Health insurance', books: 'Books and study materials',
+    otherFees: 'Other university and course fees', preOtherFees: 'Other university and course fees',
+    admission: 'Admission and registration', visaApplication: 'Visa and application',
+    travelRelocation: 'First travel and settling in'
   };
-  const ANNUAL_FIELDS = ['tuition', 'otherMandatoryAnnual', 'accommodation', 'food', 'transport', 'healthInsurance', 'books', 'personal', 'combinedLiving'];
-  const ONE_TIME_FIELDS = ['oneTimeAdmission', 'visaApplication', 'travelRelocation', 'otherOneTime'];
+  const COST_HELP = {
+    otherFees: 'Compulsory university charges not already in tuition, such as registration, exam, laboratory, student-service, technology and course-specific fees.',
+    preOtherFees: 'Compulsory university charges not already in tuition, such as registration, exam, laboratory, student-service, technology and course-specific fees.',
+    healthInsurance: 'Health cover the student must have — for example the UK health surcharge, Australia\'s OSHC or German student health insurance.',
+    visaApplication: 'Student visa and related government charges. Not needed when the child studies in their own country.',
+    travelRelocation: 'One trip to start the course and settling in. Day-to-day travel is under Local transport, so it is not counted twice.',
+    admission: 'One-time admission, application or registration charges (refundable deposits are not included).'
+  };
+  const GROUP_LABELS = {
+    tuition: 'Tuition fees', accommodation: 'Accommodation', food: 'Food', transport: 'Transport',
+    healthInsurance: 'Health insurance', books: 'Books and study materials', otherFees: 'Other university and course fees',
+    visaTravel: 'Visa, application, travel and relocation'
+  };
+  const GROUP_COLORS = {
+    tuition: '#0e1016', accommodation: '#e9a825', food: '#c98a12', transport: '#8a5d00',
+    healthInsurance: '#a61e2a', books: '#5b6b8c', otherFees: '#8b8578', visaTravel: '#2f6f4f'
+  };
+  const CHILD_COLORS = ['#0e1016', '#e9a825', '#a61e2a', '#5b6b8c'];
+  const STATUS_TEXT = {
+    verified: 'Published figure', estimated: 'Estimated — please review', missing: 'No figure yet — please enter',
+    override: 'Your figure', notNeeded: 'Not needed'
+  };
 
   /* ---------- small DOM helpers ---------- */
   function h(tag, attrs, children) {
@@ -43,7 +67,12 @@
     });
     return el;
   }
-  const appendAll = (root, ...kids) => kids.forEach((k) => { if (k) root.appendChild(k); });
+  const svg = (tag, attrs, children) => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.keys(attrs || {}).forEach((k) => el.setAttribute(k, attrs[k]));
+    (children || []).forEach((c) => el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+    return el;
+  };
   const $ = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
   const clear = (el) => { while (el.firstChild) el.removeChild(el.firstChild); return el; };
@@ -58,112 +87,95 @@
   }
 
   /* ---------- formatting ---------- */
-  function money(v, ccy, opts) {
+  function money(v, ccy) {
     if (v === null || v === undefined || !isFinite(v)) return '—';
-    const digits = Math.abs(v) < 100 && v !== 0 && !(opts && opts.whole) ? 2 : 0;
     try {
       return new Intl.NumberFormat('en', { style: 'currency', currency: ccy, currencyDisplay: 'code',
-        maximumFractionDigits: digits, minimumFractionDigits: 0 }).format(v).replace(/ /g, ' ');
+        maximumFractionDigits: 0 }).format(Math.round(v)).replace(/ /g, ' ');
     } catch (e) { return ccy + ' ' + Math.round(v).toLocaleString('en'); }
   }
   const plain = (v) => (v === null || v === undefined || !isFinite(v) ? '' : Math.round(v).toLocaleString('en'));
   const pct = (v, d) => (isFinite(v) ? (v * 100).toFixed(d === undefined ? 1 : d).replace(/\.0$/, '') + '%' : '—');
-  const yearLabel = (p) => { const y = DATA0.planStartYear + p - 1; return y + '/' + String(y + 1).slice(-2); };
+  const yearsText = (n) => (n === 1 ? '1 year' : (Number.isInteger(n) ? n : n.toFixed(1)) + ' years');
+  const academic = (y) => y + '/' + String(y + 1).slice(-2);
 
   /* ---------- state ---------- */
-  function exampleState() {
+  function kidDefaults(i) {
+    const ages = [10, 6, 3, 1];
+    const classes = [5, 1, 0, 0];
+    return { name: 'Child ' + (i + 1), age: ages[i], schoolClass: classes[i], country: 'Pakistan',
+      qualification: 'Computer Science', entryAge: DATA0.assumptions.collegeEntryAge, overrides: {}, tInf: null, lInf: null };
+  }
+  function freshState() {
     return {
-      version: 1,
-      family: { numChildren: 2, label: '', residence: '', eduCountry: 'Pakistan', repCcy: '', entryAge: 18,
-        ret: null, tuiInf: null, livInf: null, esc: null, cont: null, fxDrift: null, mode: 'monthly' },
+      version: 2,
+      family: { numChildren: 1, residence: 'Pakistan', nationality: 'Pakistan', repCcy: '',
+        coverage: DATA0.assumptions.coverageDefault * 100, ret: null, savInc: DATA0.assumptions.savingsIncreaseDefault * 100 },
       fx: {},
-      children: [
-        kidDefaults({ name: 'Child 1', age: 10, schoolClass: 'Grade 5', qualification: 'Computer Science', savings: 500000, monthly: 10000 }),
-        kidDefaults({ name: 'Child 2', age: 6, schoolClass: 'Grade 1', qualification: 'Medicine — MBBS/MD', savings: 100000, monthly: 5000 }),
-        kidDefaults({ name: 'Child 3', age: 3, qualification: 'Business Administration' }),
-        kidDefaults({ name: 'Child 4', age: 1, qualification: 'Accounting and Finance' })
-      ],
-      comparisons: []
+      children: [0, 1, 2, 3].map(kidDefaults),
+      compare: { child: 0, countries: COUNTRIES.slice() }
     };
   }
-  function kidDefaults(o) {
-    return Object.assign({ name: '', age: null, schoolClass: '', entryAge: null, country: '', category: '', qualification: '',
-      custom: '', specialisation: '', duration: null, benchmark: 'average', savings: 0, monthly: 0, annual: 0,
-      schPct: 0, schFixed: 0, otherFunding: 0, overrides: {} }, o || {});
-  }
 
-  let state = exampleState();
+  let state = freshState();
   let step = 1;
+  let lastFamily = null;
 
-  /* Dataset with the user's exchange-rate edits applied */
-  function data() {
-    const rates = Object.assign({}, DATA0.exchangeRates.rates);
-    Object.keys(state.fx || {}).forEach((c) => { if (isFinite(state.fx[c]) && state.fx[c] > 0) rates[c] = state.fx[c]; });
-    return Object.assign({}, DATA0, { exchangeRates: Object.assign({}, DATA0.exchangeRates, { rates }) });
+  const isNum = (v) => typeof v === 'number' && isFinite(v);
+  const activeKids = () => state.children.slice(0, state.family.numChildren);
+  const countryCcy = (country) => (E.countryInfo(DATA0, country) || { currency: 'USD' }).currency;
+  const reportingCurrency = () => state.family.repCcy || countryCcy(state.children[0].country);
+
+  function rates() {
+    const r = Object.assign({}, DATA0.exchangeRates.rates);
+    Object.keys(state.fx || {}).forEach((c) => { if (isNum(state.fx[c]) && state.fx[c] > 0) r[c] = state.fx[c]; });
+    return r;
   }
 
-  const pick = (v, d) => (v === null || v === undefined || v === '' || (typeof v === 'number' && !isFinite(v)) ? d : v);
-
-  function familyDefaults() {
-    return E.familyDefaults(DATA0, state.family.eduCountry, state.family.repCcy || null);
+  function familyInput() {
+    return { nationality: state.family.nationality, residence: state.family.residence, rates: rates() };
   }
 
-  function childCountry(c) { return c.country || state.family.eduCountry; }
-  function childCategory(c) {
-    const info = E.countryInfo(DATA0, childCountry(c));
-    return c.category || (info ? info.defaultCategory : '');
-  }
-
-  // Engine child object — mirrors the "value used" logic of the Excel Parent Inputs sheet.
-  function engineChild(c, override) {
-    const src = Object.assign({}, c, override || {});
-    const country = override && override.country ? override.country : childCountry(src);
-    const category = override && override.category ? override.category : childCategory(src);
-    const child = {
-      country, studentCategory: category, qualification: src.qualification, benchmark: src.benchmark || 'average',
-      age: src.age, entryAge: pick(src.entryAge, pick(state.family.entryAge, DATA0.assumptions.collegeEntryAge)),
-      savings: Number(src.savings) || 0, monthly: Number(src.monthly) || 0, annual: Number(src.annual) || 0,
-      scholarshipPct: (Number(src.schPct) || 0) / 100, scholarshipFixed: Number(src.schFixed) || 0,
-      otherFunding: Number(src.otherFunding) || 0, overrides: override ? (override.overrides || {}) : (src.overrides || {})
-    };
-    child.duration = pick(src.duration, E.childDuration(DATA0, child));
-    return child;
-  }
-
-  function assumptions(retOverride) {
-    const d = familyDefaults();
+  function assumptions() {
+    const ccy = reportingCurrency();
     const f = state.family;
     return {
-      returnRate: retOverride !== undefined ? retOverride : pick(f.ret, d.returnRate * 100) / 100,
-      tuitionInflation: pick(f.tuiInf, d.tuitionInflation * 100) / 100,
-      livingInflation: pick(f.livInf, d.livingInflation * 100) / 100,
-      contributionEscalation: pick(f.esc, d.contributionEscalation * 100) / 100,
-      contingency: pick(f.cont, d.contingency * 100) / 100,
-      fxDrift: pick(f.fxDrift, d.fxDrift * 100) / 100,
-      contributionMode: f.mode === 'annual' ? 'annual' : 'monthly'
+      reportingCurrency: ccy,
+      returnRate: (isNum(f.ret) ? f.ret : E.defaultReturn(DATA0, ccy) * 100) / 100,
+      savingsIncrease: (isNum(f.savInc) ? f.savInc : 0) / 100,
+      coverage: Math.min(100, Math.max(0, isNum(f.coverage) ? f.coverage : 0)) / 100
     };
   }
 
-  function scenario(retOverride) {
-    return { numChildren: state.family.numChildren, reportingCurrency: familyDefaults().reportingCurrency,
-      assumptions: assumptions(retOverride), children: state.children.map((c) => engineChild(c)) };
+  function engineChild(c) {
+    return { age: c.age, entryAge: c.entryAge, country: c.country, qualification: c.qualification,
+      overrides: c.overrides || {}, tuitionInflation: isNum(c.tInf) ? c.tInf / 100 : null,
+      livingInflation: isNum(c.lInf) ? c.lInf / 100 : null };
   }
 
-  /* ---------- form field builders ---------- */
+  function scenario() {
+    return { numChildren: state.family.numChildren, family: familyInput(), assumptions: assumptions(),
+      children: state.children.map(engineChild) };
+  }
+
+  const childName = (c, i) => (c.name && c.name.trim()) || 'Child ' + (i + 1);
+
+  /* ---------- form field builder ---------- */
   function field(opts) {
-    // opts: label, path, type ('number'|'text'|'select'|'percent'), options, help, min, max, step, placeholder, suffix
+    // opts: label, path, type ('number'|'text'|'select'), options, help, min, max, step, suffix, structural, wide
     const id = nextId('ec');
     const helpId = opts.help ? id + '-help' : null;
     const errId = id + '-err';
+    const described = [helpId, errId].filter(Boolean).join(' ');
     let input;
     if (opts.type === 'select') {
-      input = h('select', { id, 'data-path': opts.path, 'aria-describedby': [helpId, errId].filter(Boolean).join(' ') },
+      input = h('select', { id, 'data-path': opts.path, 'aria-describedby': described, 'data-structural': opts.structural ? '1' : null },
         opts.options.map((o) => h('option', { value: typeof o === 'object' ? o.value : o }, typeof o === 'object' ? o.label : o)));
     } else {
       input = h('input', { id, 'data-path': opts.path, type: opts.type === 'text' ? 'text' : 'number',
         inputmode: opts.type === 'text' ? null : 'decimal', min: opts.min, max: opts.max, step: opts.step || 'any',
-        placeholder: opts.placeholder, 'aria-describedby': [helpId, errId].filter(Boolean).join(' '),
-        'data-kind': opts.type === 'percent' ? 'percent' : null });
+        maxlength: opts.type === 'text' ? 40 : null, 'aria-describedby': described,
+        'data-structural': opts.structural ? '1' : null });
     }
     const control = opts.suffix ? h('div', { class: 'ec-affix' }, [input, h('span', { class: 'ec-suffix', 'aria-hidden': 'true' }, opts.suffix)]) : input;
     return h('div', { class: 'field ec-field' + (opts.wide ? ' ec-wide' : '') }, [
@@ -185,744 +197,687 @@
     else obj[last] = value;
   }
 
-  function syncInputs(root, except) {
+  function syncInputs(root) {
     $$('[data-path]', root).forEach((el) => {
-      if (el === except) return;
       const v = getPath(el.dataset.path);
       if (el.tagName === 'SELECT') {
         el.value = v === undefined || v === null ? '' : String(v);
         if (el.selectedIndex === -1 && el.options.length) el.selectedIndex = 0;
+      } else if (el.type === 'range') {
+        el.value = v === undefined || v === null ? 0 : v;
       } else if (document.activeElement !== el) {
         el.value = v === undefined || v === null ? '' : String(v);
       }
     });
   }
 
-  /* ---------- Step 1: family + children ---------- */
-  const countries = DATA0.countries.map((c) => c.name);
-
-  function renderFamily() {
-    const root = clear($('#ec-family'));
+  /* ---------- Step 1: basic information + children ---------- */
+  function renderBasic() {
+    const root = clear($('#ec-basic'));
     root.append(
-      field({ label: 'Number of children', path: 'family.numChildren', type: 'select', options: [1, 2, 3, 4].map(String) }),
-      field({ label: 'Family label (optional)', path: 'family.label', type: 'text', placeholder: 'e.g. The Lakhani family' }),
-      field({ label: 'Current country of residence', path: 'family.residence', type: 'text', placeholder: 'e.g. Qatar' }),
-      field({ label: 'Planned country of education', path: 'family.eduCountry', type: 'select', options: countries,
-        help: 'Each child can choose a different country below.' }),
-      field({ label: 'Reporting currency', path: 'family.repCcy', type: 'select',
-        options: [{ value: '', label: 'Same as education country' }].concat(DATA0.currencies.map((c) => ({ value: c, label: c }))),
-        help: 'Savings, contributions and results are shown in this currency.' }),
-      field({ label: 'Age at the start of college', path: 'family.entryAge', type: 'number', min: 14, max: 45, step: 1,
-        help: 'Default 18. You can change it for each child.' })
+      field({ label: 'Number of children', path: 'family.numChildren', type: 'select', structural: true,
+        options: [1, 2, 3, 4].map((n) => ({ value: n, label: String(n) })) }),
+      field({ label: 'Country of residence', path: 'family.residence', type: 'select', structural: true, options: PLACES,
+        help: 'Where your family lives now. Used for first-travel estimates.' }),
+      field({ label: 'Nationality', path: 'family.nationality', type: 'select', structural: true, options: PLACES,
+        help: 'The children\'s nationality. Decides local or international fees and visa costs.' }),
+      field({ label: 'Show results in', path: 'family.repCcy', type: 'select', structural: true,
+        options: [{ value: '', label: 'Automatic (Child 1\'s study country)' }].concat(DATA0.currencies.map((c) => ({ value: c, label: c }))),
+        help: 'All amounts in the results use this currency.' })
     );
-  }
-
-  function childOptionsQual() {
-    return DATA0.qualifications.map((q) => ({ value: q, label: q }));
-  }
-
-  function categoryOptions(c) {
-    const country = childCountry(c);
-    const info = E.countryInfo(DATA0, country);
-    const cats = new Set(E.categoriesFor(DATA0, country, c.qualification));
-    if (info) cats.add(info.defaultCategory);
-    DATA0.livingBenchmarks.filter((l) => l.country === country && l.studentCategory !== 'All').forEach((l) => cats.add(l.studentCategory));
-    return [{ value: '', label: 'Default (' + (info ? info.defaultCategory : '—') + ')' }].concat(Array.from(cats).map((x) => ({ value: x, label: x })));
-  }
-
-  function benchmarkOptions(c) {
-    const recs = E.recordsFor(DATA0, childCountry(c), c.qualification, childCategory(c));
-    const stats = E.benchmarkStats(DATA0, childCountry(c), c.qualification, childCategory(c));
-    const avgLabel = stats ? (stats.single ? 'University average (single institution)' : 'University average (' + stats.count + ' universities)')
-      : 'University average (no verified records)';
-    return [{ value: 'average', label: avgLabel }].concat(recs.map((r) => ({ value: r.id,
-      label: r.university + (r.includeInAverage ? '' : ' — reference only') })));
+    syncInputs(root);
   }
 
   function renderChildren() {
     const root = clear($('#ec-children'));
-    state.children.forEach((c, i) => {
+    for (let i = 0; i < MAX_KIDS; i++) {
       const p = 'children.' + i + '.';
-      const card = h('fieldset', { class: 'ec-child', 'data-child': i, hidden: i >= state.family.numChildren });
-      card.append(
-        h('legend', null, [h('span', { class: 'ec-child-badge', 'aria-hidden': 'true' }, String(i + 1)), h('span', { class: 'ec-child-title', 'data-name': i }, c.name || 'Child ' + (i + 1))]),
-        h('div', { class: 'ec-grid' }, [
-          field({ label: "Child's name", path: p + 'name', type: 'text', placeholder: 'Child ' + (i + 1) }),
-          field({ label: 'Current age', path: p + 'age', type: 'number', min: 0, max: 40, step: 1 }),
-          field({ label: 'Current school class', path: p + 'schoolClass', type: 'text', placeholder: 'e.g. Grade 4' }),
-          field({ label: 'College-entry age', path: p + 'entryAge', type: 'number', min: 14, max: 45, step: 1, placeholder: 'Family setting' }),
-          field({ label: 'Education country', path: p + 'country', type: 'select',
-            options: [{ value: '', label: 'Same as family' }].concat(countries.map((x) => ({ value: x, label: x }))) }),
-          field({ label: 'Qualification', path: p + 'qualification', type: 'select', options: childOptionsQual() }),
-          field({ label: 'Custom qualification name', path: p + 'custom', type: 'text', placeholder: 'e.g. Veterinary Science' }),
-          field({ label: 'Specialisation (optional)', path: p + 'specialisation', type: 'text' }),
-          field({ label: 'Student category', path: p + 'category', type: 'select', options: categoryOptions(c),
-            help: 'Domestic and international students pay different fees.' }),
-          field({ label: 'University benchmark', path: p + 'benchmark', type: 'select', options: benchmarkOptions(c) }),
-          field({ label: 'Course duration (years)', path: p + 'duration', type: 'number', min: 0, max: 10, step: 0.5,
-            placeholder: String(E.childDuration(DATA0, engineChild(Object.assign({}, c, { duration: null })))),
-            help: 'Blank uses the usual length for this course.' }),
-          field({ label: 'Current education savings', path: p + 'savings', type: 'number', min: 0, suffix: 'repCcy' }),
-          field({ label: 'Existing monthly contribution', path: p + 'monthly', type: 'number', min: 0, suffix: 'repCcy' }),
-          field({ label: 'Planned scholarship', path: p + 'schPct', type: 'number', min: 0, max: 100, suffix: '% of tuition' }),
-          field({ label: 'Other planned funding at college start', path: p + 'otherFunding', type: 'number', min: 0, suffix: 'repCcy',
-            help: 'e.g. a gift or maturing deposit.' })
-        ]),
-        h('p', { class: 'ec-notice', 'data-notice': i, hidden: true })
-      );
-      root.appendChild(card);
-    });
-    refreshCurrencySuffixes();
+      const grid = h('div', { class: 'ec-grid' }, [
+        field({ label: 'Child\'s name', path: p + 'name', type: 'text' }),
+        field({ label: 'Current age', path: p + 'age', type: 'select', structural: true,
+          options: Array.from({ length: 19 }, (_, a) => ({ value: a, label: a + (a === 1 ? ' year' : ' years') })) }),
+        field({ label: 'Current school class', path: p + 'schoolClass', type: 'select',
+          options: Array.from({ length: 14 }, (_, k) => ({ value: k, label: k === 0 ? '0 (pre-school / not yet at school)' : 'Class ' + k })) }),
+        field({ label: 'Plan education country', path: p + 'country', type: 'select', structural: true, options: COUNTRIES }),
+        field({ label: 'Intended qualification', path: p + 'qualification', type: 'select', structural: true, options: QUALS }),
+        field({ label: 'Expected college-entry age', path: p + 'entryAge', type: 'number', min: 14, max: 45, step: 1, structural: true,
+          help: 'Usually 18. Change it if your child will start earlier or later.' })
+      ]);
+      root.appendChild(h('fieldset', { class: 'ec-child', 'data-child': i, hidden: i >= state.family.numChildren }, [
+        h('legend', null, [h('span', { class: 'ec-child-badge', 'aria-hidden': 'true' }, String(i + 1)), h('span', { class: 'ec-child-title' }, 'Child ' + (i + 1))]),
+        grid,
+        h('div', { class: 'ec-duration', 'data-duration': i, 'aria-live': 'polite' })
+      ]));
+    }
+    syncInputs(root);
     updateChildDynamic();
   }
 
-  function refreshCurrencySuffixes() {
-    const ccy = familyDefaults().reportingCurrency;
-    $$('.ec-suffix').forEach((s) => { if (s.dataset.ccy !== undefined || s.textContent === 'repCcy') { s.dataset.ccy = '1'; s.textContent = ccy; } });
-  }
-
-  // Show/hide custom name, refresh dependent dropdowns and placeholders, show age notices
+  // Name in the legend and the read-only course length under each child
   function updateChildDynamic() {
-    state.children.forEach((c, i) => {
-      const card = $('[data-child="' + i + '"]');
-      if (!card) return;
-      card.hidden = i >= state.family.numChildren;
-      const custom = $('[data-path="children.' + i + '.custom"]', card).closest('.field');
-      custom.hidden = c.qualification !== 'Other / Custom Qualification';
-      replaceOptions($('[data-path="children.' + i + '.category"]', card), categoryOptions(c), 'category', c);
-      replaceOptions($('[data-path="children.' + i + '.benchmark"]', card), benchmarkOptions(c), 'benchmark', c);
-      const dur = $('[data-path="children.' + i + '.duration"]', card);
-      dur.placeholder = String(E.childDuration(DATA0, engineChild(Object.assign({}, c, { duration: null }))));
-      $('[data-name="' + i + '"]').textContent = c.name || 'Child ' + (i + 1);
-      const notice = $('[data-notice="' + i + '"]', card);
-      const entry = pick(c.entryAge, pick(state.family.entryAge, 18));
-      if (isFinite(c.age) && isFinite(entry) && c.age !== null && entry <= c.age) {
-        notice.hidden = false;
-        notice.textContent = 'This child is already at college age, so education costs start now. The results show any lump sum needed today as well as monthly saving.';
-      } else notice.hidden = true;
+    $$('.ec-child').forEach((fs) => {
+      const i = Number(fs.dataset.child);
+      const c = state.children[i];
+      fs.hidden = i >= state.family.numChildren;
+      $('.ec-child-title', fs).textContent = childName(c, i);
+      const box = clear($('[data-duration]', fs));
+      const d = E.courseDuration(DATA0, c.country, c.qualification);
+      if (!d.available) {
+        box.appendChild(h('p', { class: 'ec-warn' }, [h('strong', null, 'Not offered here. '), d.note || 'Choose another country or qualification.']));
+        return;
+      }
+      const lines = [h('strong', null, 'Course length: ' + yearsText(d.years)),
+        ' — ' + (d.variable ? 'typical length; the actual length may vary. ' : '') + (d.note || '')];
+      box.appendChild(h('p', { class: 'ec-duration-text' }, lines));
+      const start = DATA0.planStartYear + Math.max(0, c.entryAge - c.age);
+      const startText = c.entryAge <= c.age ? 'Starts college this year (' + academic(DATA0.planStartYear) + ').'
+        : 'Starts college in ' + yearsText(c.entryAge - c.age) + ' (' + academic(start) + ').';
+      box.appendChild(h('p', { class: 'ec-help' }, startText));
     });
   }
 
-  function replaceOptions(select, options, key, c) {
-    const current = c[key] || '';
-    clear(select);
-    options.forEach((o) => select.appendChild(h('option', { value: o.value }, o.label)));
-    if (!options.some((o) => o.value === current)) c[key] = key === 'benchmark' ? 'average' : '';
-    select.value = c[key] || (key === 'benchmark' ? 'average' : '');
+  /* ---------- Step 2: education costs ---------- */
+  function planRows(costs, dur) {
+    const pre = costs.preStage;
+    const q = E.qualificationInfo(DATA0, costs.qualification);
+    // ACCA, CPA and CA are exam pathways, not taught degrees
+    const mainFee = q && q.kind === 'professional' ? 'Exam, registration and membership fees' : COST_LABELS.tuition;
+    const rows = [];
+    if (pre) {
+      rows.push({ key: 'preTuition', label: COST_LABELS.tuition + ' — years 1–' + pre.years + ' (' + pre.label + ')', timing: 'per year' });
+      rows.push({ key: 'preOtherFees', label: COST_LABELS.otherFees + ' — years 1–' + pre.years, timing: 'per year' });
+      rows.push({ key: 'tuition', label: mainFee + ' — years ' + (pre.years + 1) + '–' + Math.ceil(dur), timing: 'per year' });
+      rows.push({ key: 'otherFees', label: COST_LABELS.otherFees + ' — years ' + (pre.years + 1) + '–' + Math.ceil(dur), timing: 'per year' });
+    } else {
+      rows.push({ key: 'tuition', label: mainFee, timing: 'per year' });
+      rows.push({ key: 'otherFees', label: COST_LABELS.otherFees, timing: 'per year' });
+    }
+    ['accommodation', 'food', 'transport', 'healthInsurance', 'books'].forEach((k) => rows.push({ key: k, label: COST_LABELS[k], timing: 'per year' }));
+    ['admission', 'visaApplication', 'travelRelocation'].forEach((k) => rows.push({ key: k, label: COST_LABELS[k], timing: 'once' }));
+    return rows;
   }
 
-  /* ---------- validation messages ---------- */
-  function validate() {
-    let ok = true;
-    $$('.ec-error').forEach((e) => { e.textContent = ''; });
-    $$('[aria-invalid]').forEach((e) => e.removeAttribute('aria-invalid'));
-    const err = (path, msg) => {
-      const el = $('[data-path="' + path + '"]');
-      if (!el) return;
-      const box = el.closest('.field');
-      if (box && box.closest('[hidden]')) return;
-      el.setAttribute('aria-invalid', 'true');
-      $('.ec-error', box).textContent = msg;
-      ok = false;
-    };
-    const f = state.family;
-    if (f.entryAge !== null && f.entryAge !== '' && (!Number.isInteger(f.entryAge) || f.entryAge < 14 || f.entryAge > 45)) err('family.entryAge', 'Enter a whole number from 14 to 45.');
-    state.children.slice(0, f.numChildren).forEach((c, i) => {
-      const p = 'children.' + i + '.';
-      if (c.age === null || c.age === '' || !isFinite(c.age)) err(p + 'age', 'Enter the child\'s age.');
-      else if (!Number.isInteger(c.age) || c.age < 0 || c.age > 40) err(p + 'age', 'Enter a whole number from 0 to 40.');
-      if (c.entryAge !== null && (!Number.isInteger(c.entryAge) || c.entryAge < 14 || c.entryAge > 45)) err(p + 'entryAge', 'Enter a whole number from 14 to 45, or leave blank.');
-      if (c.duration !== null && (c.duration < 0 || c.duration > 10)) err(p + 'duration', 'Enter 0 to 10 years, or leave blank.');
-      ['savings', 'monthly', 'annual', 'schFixed', 'otherFunding'].forEach((k) => {
-        if (Number(c[k]) < 0) err(p + k, 'Amounts cannot be negative.');
-      });
-      if (c.schPct < 0 || c.schPct > 100) err(p + 'schPct', 'Enter 0% to 100%.');
-      if (!c.qualification) err(p + 'qualification', 'Choose a qualification.');
-    });
-    const a = assumptions();
-    E.validateAssumptions(a).forEach((m) => {
-      const map = { returnRate: 'family.ret', tuitionInflation: 'family.tuiInf', livingInflation: 'family.livInf',
-        contributionEscalation: 'family.esc', fxDrift: 'family.fxDrift' };
-      const key = Object.keys(map).find((k) => m.indexOf(k) === 0) || (m.indexOf('Investment') === 0 ? 'returnRate' : null);
-      if (m.indexOf('Contingency') === 0) err('family.cont', m);
-      else if (key) err(map[key], m.replace(/^[a-zA-Z]+ must/, 'Must'));
-    });
-    return ok;
-  }
-
-  /* ---------- Step 2: education plan ---------- */
   function renderPlans() {
     const root = clear($('#ec-plans'));
-    const d = data();
-    state.children.slice(0, state.family.numChildren).forEach((c, i) => {
-      const ec = engineChild(c);
-      const costs = E.resolveCosts(d, ec);
+    const fam = familyInput();
+    activeKids().forEach((c, i) => {
+      const d = E.courseDuration(DATA0, c.country, c.qualification);
+      const sec = h('section', { class: 'ec-plan', 'aria-labelledby': 'ec-plan-h-' + i });
+      sec.appendChild(h('h3', { id: 'ec-plan-h-' + i }, childName(c, i) + ' — ' + c.qualification + ' in ' + c.country));
+      if (!d.available) {
+        sec.appendChild(h('p', { class: 'ec-warn' }, (d.note || 'This qualification is not offered in this country.') + ' Go back to Basic information to choose another country or qualification.'));
+        root.appendChild(sec);
+        return;
+      }
+      const costs = E.resolveCosts(DATA0, engineChild(c), fam);
       const ccy = costs.currency;
-      const stats = costs.stats;
-      const card = h('article', { class: 'ec-plan', 'aria-labelledby': 'ec-plan-' + i });
-      const qualName = c.qualification === 'Other / Custom Qualification' && c.custom ? c.custom : c.qualification;
-      card.append(h('header', { class: 'ec-plan-head' }, [
-        h('h3', { id: 'ec-plan-' + i }, (c.name || 'Child ' + (i + 1)) + ': ' + (qualName || 'no qualification chosen') + (c.specialisation ? ' (' + c.specialisation + ')' : '')),
-        h('dl', { class: 'ec-facts' }, [
-          fact('Country', ec.country), fact('Student category', ec.studentCategory), fact('Fee currency', ccy),
-          fact('Duration', ec.duration + (ec.duration === 1 ? ' year' : ' years')), fact('Benchmark', costs.benchmarkLabel)
-        ])
+      sec.appendChild(h('p', { class: 'ec-plan-meta' }, [
+        (costs.feeStatus === 'domestic' ? 'Local student fees' : 'International student fees') + ' (nationality: ' + state.family.nationality + '). ',
+        'Course length ' + yearsText(d.years) + '. Amounts are today\'s prices in ' + ccy + '.'
       ]));
-      if (stats && ec.benchmark === 'average') {
-        card.appendChild(h('p', { class: 'ec-stats' },
-          (stats.single ? 'Single-institution benchmark. ' : 'Average of ' + stats.count + ' universities. ') +
-          'Median tuition ' + money(stats.medianTuition, ccy) + '; range ' + money(stats.minTuition, ccy) + ' to ' +
-          money(stats.maxTuition, ccy) + '. Fee years: ' + stats.feeYears.join(', ') + '.'));
-      }
-      if (!costs.hasTuitionData) {
-        card.appendChild(h('p', { class: 'ec-warn' }, 'There is no verified fee record for this course yet. Enter your own tuition estimate below; it will be marked as your override.'));
-      }
-      if (['ACCA', 'CPA', 'Chartered Accountancy (CA)'].indexOf(c.qualification) !== -1) {
-        card.appendChild(h('p', { class: 'ec-warn' }, DATA0.professionalQualificationNote));
-      }
-      if (costs.livingNote && /Partial|not verified/i.test(costs.livingNote)) {
-        card.appendChild(h('p', { class: 'ec-warn' }, 'Living costs are incomplete for this country: ' + costs.livingNote + '. Add your own figures for any blank line.'));
-      }
+
       const tbody = h('tbody');
-      const addRow = (f) => {
-        const isOv = Object.prototype.hasOwnProperty.call(c.overrides || {}, f);
-        const base = E.resolveCosts(d, Object.assign({}, ec, { overrides: {} })).base[f];
-        const id = nextId('ec-ov');
-        const inp = h('input', { id, type: 'number', min: 0, step: 'any', inputmode: 'decimal', 'data-override': i, 'data-field': f,
-          placeholder: plain(base) || '0', value: isOv ? String(c.overrides[f]) : null, 'aria-label': COST_LABELS[f] + ' — your figure in ' + ccy });
-        tbody.appendChild(h('tr', { class: isOv ? 'is-override' : null }, [
-          h('th', { scope: 'row' }, COST_LABELS[f]),
-          h('td', { class: 'ec-num' }, base ? money(base, ccy, { whole: true }) : '—'),
-          h('td', null, h('div', { class: 'ec-ov-cell' }, [inp, isOv ? h('span', { class: 'ec-badge' }, 'Your override') : null]))
+      planRows(costs, d.years).forEach((row) => {
+        const it = costs.items[row.key];
+        if (!it) return;
+        const path = 'children.' + i + '.overrides.' + row.key;
+        const inputId = nextId('ec-cost');
+        const helpId = COST_HELP[row.key] ? inputId + '-h' : null;
+        const statusKey = it.status;
+        const input = h('input', { id: inputId, type: 'number', min: 0, step: 'any', inputmode: 'decimal',
+          'data-cost': row.key, 'data-child': i, 'aria-describedby': helpId });
+        input.value = Math.round(it.amount);
+        const notes = [it.note].filter(Boolean);
+        const srcList = (it.sources || []).filter((s) => safeUrl(s.url));
+        tbody.appendChild(h('tr', { class: statusKey === 'override' ? 'is-override' : statusKey === 'missing' ? 'is-missing' : null, 'data-row': row.key }, [
+          h('th', { scope: 'row' }, [
+            h('label', { for: inputId }, row.label),
+            h('span', { class: 'ec-timing' }, row.timing === 'once' ? ' (one-time, first year)' : ' (per year)'),
+            helpId ? h('span', { class: 'ec-help ec-help-row', id: helpId }, COST_HELP[row.key]) : null
+          ]),
+          h('td', null, h('div', { class: 'ec-affix' }, [input, h('span', { class: 'ec-suffix', 'aria-hidden': 'true' }, ccy)])),
+          h('td', null, [
+            h('span', { class: 'ec-status ec-status-' + statusKey }, STATUS_TEXT[statusKey] || statusKey),
+            statusKey === 'override' ? h('button', { type: 'button', class: 'ec-link-btn', 'data-action': 'undo', 'data-path': path, 'aria-label': 'Use the researched figure for ' + row.label }, 'Undo') : null,
+            notes.length || srcList.length ? h('details', { class: 'ec-why' }, [
+              h('summary', null, 'Why this figure?'),
+              notes.length ? h('p', null, notes.join(' ')) : null,
+              srcList.length ? h('ul', { class: 'ec-sources' }, srcList.slice(0, 6).map((s) =>
+                h('li', null, [h('a', { href: safeUrl(s.url), target: '_blank', rel: 'noopener' }, s.label), s.status ? ' — ' + s.status : '']))) : null
+            ]) : null
+          ])
         ]));
-      };
-      tbody.appendChild(h('tr', { class: 'ec-group' }, h('th', { colspan: 3, scope: 'colgroup' }, 'Every study year')));
-      ANNUAL_FIELDS.forEach(addRow);
-      tbody.appendChild(h('tr', { class: 'ec-group' }, h('th', { colspan: 3, scope: 'colgroup' }, 'Once, in the first study year')));
-      ONE_TIME_FIELDS.forEach(addRow);
-      card.appendChild(h('div', { class: 'ec-table-wrap' }, h('table', { class: 'ec-table ec-costs' }, [
-        h('caption', { class: 'sr-only' }, 'Cost assumptions for ' + (c.name || 'Child ' + (i + 1))),
-        h('thead', null, h('tr', null, [h('th', { scope: 'col' }, 'Cost (today, ' + ccy + ')'), h('th', { scope: 'col', class: 'ec-num' }, 'Researched'), h('th', { scope: 'col' }, 'Your figure')])),
+      });
+      sec.appendChild(h('div', { class: 'ec-table-wrap' }, h('table', { class: 'ec-table ec-costs' }, [
+        h('caption', { class: 'sr-only' }, 'Education costs for ' + childName(c, i)),
+        h('thead', null, h('tr', null, [h('th', { scope: 'col' }, 'Cost'), h('th', { scope: 'col' }, 'Amount (' + ccy + ')'), h('th', { scope: 'col' }, 'Where it comes from')])),
         tbody
       ])));
-      if (Object.keys(c.overrides || {}).length) {
-        card.appendChild(h('button', { type: 'button', class: 'btn btn-sm ec-btn-outline', 'data-clear-overrides': i }, 'Use researched figures again'));
+      const qi = E.qualificationInfo(DATA0, c.qualification);
+      if (qi && qi.kind === 'professional') {
+        sec.appendChild(h('p', { class: 'ec-help-block' }, DATA0.professionalQualificationNote +
+          ' Living costs assume the student lives away from home — set them to 0 if your child will live at home while studying.'));
       }
-      const srcList = h('ul', { class: 'ec-sources' });
-      costs.sources.forEach((s) => {
-        const url = safeUrl(s.url);
-        srcList.appendChild(h('li', null, [url ? h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, s.label) : s.label,
-          h('span', { class: 'ec-src-status' }, ' — ' + s.status)]));
-      });
-      card.appendChild(h('details', { class: 'ec-details' }, [h('summary', null, 'Sources and notes (' + costs.sources.length + ')'), srcList,
-        notesFor(costs, ec)]));
-      root.appendChild(card);
+      const missing = Object.keys(costs.items).filter((k) => costs.items[k].status === 'missing');
+      if (missing.some((k) => k === 'tuition' || k === 'preTuition')) {
+        sec.appendChild(h('p', { class: 'ec-warn' }, 'We have not found a published fee for this course yet. Please enter an estimate for tuition, for example from a university you are considering. Until then the plan leaves tuition out.'));
+      }
+      root.appendChild(sec);
     });
   }
 
-  function notesFor(costs, ec) {
-    const recs = ec.benchmark !== 'average' ? DATA0.records.filter((r) => r.id === ec.benchmark)
-      : (costs.stats ? costs.stats.records : []);
-    if (!recs.length) return null;
-    return h('ul', { class: 'ec-notes' }, recs.map((r) => h('li', null, r.university + ': ' + r.notes)));
+  function renderCoverage() {
+    const root = clear($('#ec-coverage'));
+    const id = nextId('ec-cov');
+    const helpId = id + '-help';
+    const range = h('input', { type: 'range', id, min: 0, max: 100, step: 5, 'data-path': 'family.coverage', 'aria-describedby': helpId });
+    const box = h('input', { type: 'number', min: 0, max: 100, step: 1, 'data-path': 'family.coverage', 'aria-label': 'Percentage covered', inputmode: 'decimal' });
+    root.appendChild(h('div', { class: 'ec-coverage' }, [
+      h('label', { for: id, class: 'ec-coverage-label' }, 'Expected education costs covered by scholarship or part-time work'),
+      h('div', { class: 'ec-coverage-controls' }, [range, h('div', { class: 'ec-affix ec-coverage-num' }, [box, h('span', { class: 'ec-suffix', 'aria-hidden': 'true' }, '%')])]),
+      h('p', { class: 'ec-help', id: helpId }, 'This percentage represents the portion of eligible education costs that you expect scholarships, bursaries or permitted part-time work to cover. This is an assumption, not a guarantee. It reduces tuition, university fees and living costs — not visa or first-travel costs — and is applied only once.')
+    ]));
+    syncInputs(root);
   }
 
-  function fact(label, value) {
-    return h('div', null, [h('dt', null, label), h('dd', null, value || '—')]);
-  }
-
-  /* ---------- Step 3: assumptions ---------- */
   function renderAssumptions() {
-    const d = familyDefaults();
     const root = clear($('#ec-assumptions'));
-    const pctField = (label, path, def, help) => field({ label, path, type: 'number', step: 0.1, suffix: '%',
-      placeholder: (def * 100).toFixed(1).replace(/\.0$/, ''), help });
-    root.append(
-      pctField('Expected annual investment return', 'family.ret', d.returnRate,
-        'What you expect your savings to earn each year before inflation. An assumption, not a guarantee; zero or negative is allowed.'),
-      pctField('Tuition inflation', 'family.tuiInf', d.tuitionInflation, 'How fast university fees rise each year.'),
-      pctField('Living-cost inflation', 'family.livInf', d.livingInflation, 'How fast rent, food and travel rise each year.'),
-      pctField('Yearly increase in your contributions', 'family.esc', d.contributionEscalation, 'e.g. 5% means saving a little more each year as income grows.'),
-      pctField('Contingency allowance', 'family.cont', d.contingency, 'Extra on top of all costs for surprises.'),
-      pctField('Yearly exchange-rate change', 'family.fxDrift', d.fxDrift,
-        'Use a positive number if you expect your currency to weaken against the fee currency.'),
-      field({ label: 'Contribution timing', path: 'family.mode', type: 'select',
-        options: [{ value: 'monthly', label: 'Monthly (paid at month-end)' }, { value: 'annual', label: 'Once a year (paid at year-end)' }] })
-    );
-    renderFunding();
-    renderFx();
-  }
+    const ccy = reportingCurrency();
+    root.appendChild(h('p', { class: 'ec-help-block' }, 'Education fees may rise over time. We use historical information where available to estimate future costs. Actual increases may differ. Leave a box empty to use our figure.'));
+    root.appendChild(h('div', { class: 'ec-grid' }, [
+      field({ label: 'Expected yearly investment return', path: 'family.ret', type: 'number', min: -50, max: 30, step: 0.1, suffix: '%',
+        help: 'Our figure for ' + ccy + ': ' + pct(E.defaultReturn(DATA0, ccy)) + '. ' + DATA0.assumptions.returnNote }),
+      field({ label: 'Increase your savings each year by', path: 'family.savInc', type: 'number', min: 0, max: 20, step: 0.5, suffix: '%',
+        help: '0% means the same amount every year. A higher figure starts lower and rises.' })
+    ]));
 
-  function renderFunding() {
-    const t = clear($('#ec-funding'));
-    const ccy = familyDefaults().reportingCurrency;
-    const n = state.family.numChildren;
-    const cols = [['savings', 'Current savings'], ['monthly', 'Monthly contribution'], ['annual', 'Annual contribution'],
-      ['schPct', 'Scholarship (% of tuition)'], ['schFixed', 'Scholarship per study year'], ['otherFunding', 'Other funding at college start']];
-    t.append(h('caption', { class: 'ec-caption' }, 'Amounts in ' + ccy + '. These are the same fields as on the Family step.'),
-      h('thead', null, h('tr', null, [h('th', { scope: 'col' }, 'Child')].concat(cols.map((c) => h('th', { scope: 'col' }, c[1]))))),
-      h('tbody', null, state.children.slice(0, n).map((c, i) => h('tr', null, [h('th', { scope: 'row' }, c.name || 'Child ' + (i + 1))]
-        .concat(cols.map((col) => h('td', null, h('input', { type: 'number', min: 0, step: 'any', inputmode: 'decimal',
-          'data-path': 'children.' + i + '.' + col[0], 'aria-label': col[1] + ' for ' + (c.name || 'Child ' + (i + 1)) }))))))));
-    syncInputs(t);
-  }
+    const fam = familyInput();
+    const body = h('tbody');
+    activeKids().forEach((c, i) => {
+      const fs = E.feeStatusFor(DATA0, c.country, fam.nationality);
+      const t = E.tuitionInflationFor(DATA0, c.country, c.qualification, fs);
+      const l = E.livingInflationFor(DATA0, c.country);
+      const tId = nextId('ec-ti'), lId = nextId('ec-li');
+      body.appendChild(h('tr', null, [
+        h('th', { scope: 'row' }, childName(c, i) + ' — ' + c.country),
+        h('td', null, [h('label', { for: tId, class: 'sr-only' }, 'Fee increase per year for ' + childName(c, i)),
+          h('div', { class: 'ec-affix' }, [h('input', { id: tId, type: 'number', step: 0.1, min: -10, max: 30, 'data-path': 'children.' + i + '.tInf', placeholder: (t.rate * 100).toFixed(1), 'data-structural': '1' }), h('span', { class: 'ec-suffix', 'aria-hidden': 'true' }, '%')]),
+          h('span', { class: 'ec-help' }, 'Our figure ' + pct(t.rate) + ' — ' + (t.basis === 'planning' ? 'planning assumption. ' : 'based on published fees. ') + (t.note || ''))]),
+        h('td', null, [h('label', { for: lId, class: 'sr-only' }, 'Living-cost increase per year for ' + childName(c, i)),
+          h('div', { class: 'ec-affix' }, [h('input', { id: lId, type: 'number', step: 0.1, min: -10, max: 30, 'data-path': 'children.' + i + '.lInf', placeholder: (l.rate * 100).toFixed(1), 'data-structural': '1' }), h('span', { class: 'ec-suffix', 'aria-hidden': 'true' }, '%')]),
+          h('span', { class: 'ec-help' }, 'Our figure ' + pct(l.rate) + ' — planning assumption.')])
+      ]));
+    });
+    root.appendChild(h('h3', { class: 'ec-sub' }, 'Yearly price rises'));
+    root.appendChild(h('div', { class: 'ec-table-wrap' }, h('table', { class: 'ec-table' }, [
+      h('thead', null, h('tr', null, [h('th', { scope: 'col' }, 'Child'), h('th', { scope: 'col' }, 'University fees rise by'), h('th', { scope: 'col' }, 'Living costs rise by')])),
+      body
+    ])));
 
-  function renderFx() {
-    const t = clear($('#ec-fx'));
-    const fx = DATA0.exchangeRates;
-    $('#ec-fx-note').textContent = 'Reference rates from ' + fx.date + ' (European Central Bank cross-rates; Pakistani rupee from the State Bank of Pakistan), shown as units per 1 US dollar. Edit a rate to use your own.';
-    t.append(h('thead', null, h('tr', null, [h('th', { scope: 'col' }, 'Currency'), h('th', { scope: 'col', class: 'ec-num' }, 'Reference rate'), h('th', { scope: 'col' }, 'Your rate (per 1 USD)')])),
-      h('tbody', null, DATA0.currencies.filter((c) => c !== 'USD').map((c) => h('tr', null, [h('th', { scope: 'row' }, c),
-        h('td', { class: 'ec-num' }, fx.rates[c].toLocaleString('en', { maximumFractionDigits: 4 })),
-        h('td', null, h('input', { type: 'number', min: 0, step: 'any', inputmode: 'decimal', 'data-path': 'fx.' + c,
-          placeholder: String(fx.rates[c]), 'aria-label': 'Your rate for ' + c }))]))));
-    syncInputs(t);
+    // exchange rates, only when some amount has to be converted
+    const used = Array.from(new Set(activeKids().map((c) => countryCcy(c.country)).concat([ccy])));
+    if (used.length > 1) {
+      root.appendChild(h('h3', { class: 'ec-sub' }, 'Exchange rates'));
+      root.appendChild(h('p', { class: 'ec-help-block' }, 'Amounts are converted into ' + ccy + ' at reference rates from ' +
+        DATA0.exchangeRates.date + ' (European Central Bank; State Bank of Pakistan for PKR). Change a rate if you expect a different one.'));
+      const grid = h('div', { class: 'ec-grid' });
+      used.filter((c) => c !== 'USD').forEach((c) => {
+        grid.appendChild(field({ label: c + ' per 1 USD', path: 'fx.' + c, type: 'number', min: 0, step: 'any', structural: true,
+          help: 'Reference rate: ' + DATA0.exchangeRates.rates[c] }));
+      });
+      root.appendChild(grid);
+    }
+    syncInputs(root);
   }
 
   /* ---------- results ---------- */
-  let lastFamily = null;
-
   function compute() {
-    const fam = E.projectFamily(data(), scenario());
-    lastFamily = fam;
-    return fam;
+    lastFamily = E.projectFamily(DATA0, scenario());
+    return lastFamily;
+  }
+
+  function problems(fam) {
+    const list = [];
+    fam.children.forEach((k, i) => {
+      const name = childName(state.children[i], i);
+      if (!k.ok) k.errors.forEach((e) => list.push(name + ': ' + e));
+      else if (k.summary.hasMissing) list.push(name + ': some costs have no figure yet (see Education costs).');
+    });
+    return list;
+  }
+
+  function lumpText(fam) {
+    const ccy = reportingCurrency();
+    if (fam.totals.lumpNow <= 0.5) return null;
+    const who = fam.children.map((k, i) => (k.ok && k.summary.lumpNow > 0.5 ? childName(state.children[i], i) : null)).filter(Boolean);
+    return 'Plus about ' + money(fam.totals.lumpNow, ccy) + ' needed now, because ' + who.join(' and ') +
+      (who.length > 1 ? ' start' : ' starts') + ' college before any yearly saving can be made.';
   }
 
   function renderRail(fam) {
     const root = clear($('#ec-rail'));
-    const ccy = familyDefaults().reportingCurrency;
-    const t = fam.totals;
-    const annual = state.family.mode === 'annual';
-    const invalid = fam.children.slice(0, state.family.numChildren).filter((k) => !k.ok).length;
-    appendAll(root,
-      h('p', { class: 'ec-rail-label' }, annual ? 'Extra saving needed this year' : 'Extra saving needed each month'),
-      h('p', { class: 'ec-rail-figure' }, money(annual ? t.requiredAnnualFirstYear : t.requiredMonthlyFirstYear, ccy, { whole: true })),
-      h('p', { class: 'ec-rail-sub' }, 'on top of what you already save, rising ' + pct(assumptions().contributionEscalation) + ' a year'),
-      t.requiredLumpNow > 0.5 ? h('p', { class: 'ec-rail-lump' }, 'Plus ' + money(t.requiredLumpNow, ccy) + ' needed now for costs that start before savings can grow.') : null,
-      h('dl', { class: 'ec-rail-list' }, [
-        railItem('Total estimated cost', money(t.totalCost, ccy)),
-        railItem('Covered by your current plan', pct(t.coverage, 0)),
-        railItem(t.surplusOrGap < 0 ? 'Funding gap' : 'Projected surplus', money(Math.abs(t.surplusOrGap), ccy), t.surplusOrGap < 0 ? 'is-gap' : 'is-ok')
-      ]),
-      invalid ? h('p', { class: 'ec-rail-warn' }, invalid + (invalid === 1 ? ' child has' : ' children have') + ' missing or invalid details and are left out.') : null,
-      h('button', { type: 'button', class: 'btn btn-primary btn-sm btn-block', 'data-goto': '4' }, 'See full results')
+    const ccy = reportingCurrency();
+    const ok = fam.children.some((k) => k.ok);
+    root.append(
+      h('p', { class: 'ec-rail-label' }, 'Total education fund required'),
+      h('p', { class: 'ec-rail-figure' }, ok ? money(fam.totals.totalCost, ccy) : '—'),
+      h('p', { class: 'ec-rail-label ec-rail-gap' }, 'Required yearly savings (this year)'),
+      h('p', { class: 'ec-rail-figure ec-rail-figure-2' }, ok ? money(fam.totals.firstYearSaving, ccy) : '—')
     );
+    const lt = lumpText(fam);
+    if (lt) root.appendChild(h('p', { class: 'ec-rail-lump' }, lt));
+    if (problems(fam).length) root.appendChild(h('p', { class: 'ec-rail-warn' }, 'Some information is missing — see Results.'));
+    if (step !== 3) root.appendChild(h('button', { type: 'button', class: 'btn btn-primary btn-sm btn-block', 'data-goto': '3' }, 'See full results'));
   }
-  const railItem = (k, v, cls) => h('div', { class: cls || null }, [h('dt', null, k), h('dd', null, v)]);
 
   function renderResults(fam) {
     const root = clear($('#ec-results'));
-    const ccy = familyDefaults().reportingCurrency;
-    const t = fam.totals;
-    const annual = state.family.mode === 'annual';
-    const names = state.children.map((c, i) => c.name || 'Child ' + (i + 1));
-
-    root.appendChild(h('p', { class: 'ec-intro' }, 'All amounts are in ' + ccy + ' and include future inflation. Estimates only, based on the assumptions on the previous steps.'));
-    const kpis = h('dl', { class: 'ec-kpis' }, [
-      kpi('Total estimated future education cost', money(t.totalCost, ccy)),
-      kpi(annual ? 'Extra saving needed this year' : 'Extra saving needed each month (year 1)', money(annual ? t.requiredAnnualFirstYear : t.requiredMonthlyFirstYear, ccy), 'is-key'),
-      kpi('Extra saving needed per year (year 1)', money(t.requiredAnnualFirstYear, ccy)),
-      kpi('Current projected funding at college start', money(t.projectedExisting, ccy)),
-      kpi(t.surplusOrGap < 0 ? 'Funding gap with your current plan' : 'Surplus with your current plan', money(Math.abs(t.surplusOrGap), ccy), t.surplusOrGap < 0 ? 'is-gap' : 'is-ok'),
-      kpi('Share of costs your current plan covers', pct(t.coverage, 0))
-    ]);
-    root.appendChild(kpis);
-    if (t.requiredLumpNow > 0.5) {
-      root.appendChild(h('p', { class: 'ec-warn' }, 'An up-front amount of ' + money(t.requiredLumpNow, ccy) + ' is needed now, because some costs start before monthly saving can build up.'));
+    const ccy = reportingCurrency();
+    const a = assumptions();
+    const probs = problems(fam);
+    if (probs.length) {
+      root.appendChild(h('div', { class: 'ec-warn', role: 'note' }, [h('strong', null, 'Please check: '), h('ul', null, probs.map((p) => h('li', null, p)))]));
     }
+    const okKids = fam.children.map((k, i) => ({ k, i })).filter((x) => x.k.ok);
+    if (!okKids.length) return;
 
-    // per-child table
-    const rows = fam.children.map((k, i) => {
-      if (i >= state.family.numChildren) return null;
-      if (!k.ok) return h('tr', null, [h('th', { scope: 'row' }, names[i]), h('td', { colspan: 6, class: 'ec-err-cell' }, 'Left out: ' + k.errors.join(' '))]);
-      const s = k.summary;
-      return h('tr', null, [h('th', { scope: 'row' }, names[i]),
-        h('td', { class: 'ec-num' }, s.yearsToCollege === 0 ? 'Now' : s.yearsToCollege + ' yrs'),
-        h('td', { class: 'ec-num' }, money(s.costAtStart, ccy)),
-        h('td', { class: 'ec-num' }, money(s.totalCost, ccy)),
-        h('td', { class: 'ec-num' }, money(s.fvSavingsAtStart + s.fvContributionsAtStart, ccy)),
-        h('td', { class: 'ec-num ec-strong' }, annual ? money(s.requiredAnnualFirstYear, ccy) : money(s.requiredMonthlyFirstYear, ccy)),
-        h('td', { class: 'ec-num' }, pct(s.coverage, 0))]);
-    }).filter(Boolean);
+    // 1. the two headline figures
+    const n = state.family.numChildren;
+    const lt = lumpText(fam);
+    const savingNote = fam.totals.firstYearSaving > 0.5
+      ? 'This is the family\'s saving for ' + academic(DATA0.planStartYear).replace('/', '–') + '. ' +
+        (a.savingsIncrease > 0 ? 'It rises by ' + pct(a.savingsIncrease) + ' each year. ' : '') +
+        'The amount changes in later years as children start and finish — see the yearly plan below.'
+      : (lt ? 'No yearly saving can help, because the costs start right away.' : 'No saving is needed under these assumptions.');
+    root.appendChild(h('div', { class: 'ec-headline' }, [
+      h('div', { class: 'ec-big' }, [
+        h('p', { class: 'ec-big-label' }, 'Total education fund required'),
+        h('p', { class: 'ec-big-figure' }, money(fam.totals.totalCost, ccy)),
+        h('p', { class: 'ec-big-note' }, 'For ' + (n === 1 ? 'your child\'s full course' : 'all ' + n + ' children\'s full courses') +
+          ', at future prices' + (a.coverage > 0 ? ', after ' + pct(a.coverage, 0) + ' covered by scholarship or part-time work' : '') + '.')
+      ]),
+      h('div', { class: 'ec-big ec-big-dark' }, [
+        h('p', { class: 'ec-big-label' }, 'Required yearly savings'),
+        h('p', { class: 'ec-big-figure' }, money(fam.totals.firstYearSaving, ccy)),
+        h('p', { class: 'ec-big-note' }, savingNote),
+        lt ? h('p', { class: 'ec-big-lump' }, lt) : null
+      ])
+    ]));
+
+    // 2. child summary
     root.appendChild(h('h3', { class: 'ec-sub' }, 'Each child'));
     root.appendChild(h('div', { class: 'ec-table-wrap' }, h('table', { class: 'ec-table' }, [
-      h('thead', null, h('tr', null, ['Child', 'Starts in', 'First-year cost', 'Total cost', 'Your savings at start',
-        annual ? 'Extra per year' : 'Extra per month', 'Covered now'].map((x, j) => h('th', { scope: 'col', class: j ? 'ec-num' : null }, x)))),
-      h('tbody', null, rows)])));
+      h('thead', null, h('tr', null, [h('th', { scope: 'col' }, 'Child'), h('th', { scope: 'col' }, 'Education starts in'),
+        h('th', { scope: 'col', class: 'ec-num' }, 'Total estimated education cost')])),
+      h('tbody', null, fam.children.map((k, i) => {
+        const c = state.children[i];
+        if (!k.ok) return h('tr', null, [h('th', { scope: 'row' }, childName(c, i)), h('td', { colspan: 2, class: 'ec-err-cell' }, k.errors[0])]);
+        const s = k.summary;
+        return h('tr', null, [
+          h('th', { scope: 'row' }, childName(c, i)),
+          h('td', null, s.yearsToCollege === 0 ? 'This year (' + academic(s.startYear) + ')' : yearsText(s.yearsToCollege) + ' (' + academic(s.startYear) + ')'),
+          h('td', { class: 'ec-num ec-strong' }, money(s.totalCost, ccy))
+        ]);
+      }).concat(n > 1 ? [h('tr', { class: 'ec-total-row' }, [h('th', { scope: 'row' }, 'All children'), h('td'), h('td', { class: 'ec-num ec-strong' }, money(fam.totals.totalCost, ccy))])] : []))
+    ])));
 
-    // breakdown
-    root.appendChild(h('h3', { class: 'ec-sub' }, 'Cost breakdown'));
-    root.appendChild(breakdown(t, ccy));
+    // 3. cost breakdown
+    root.appendChild(h('h3', { class: 'ec-sub' }, 'Where the money goes'));
+    root.appendChild(breakdown(fam, ccy, a));
 
-    // chart
-    root.appendChild(h('h3', { class: 'ec-sub' }, 'Fund balance and education costs by year'));
-    root.appendChild(h('p', { class: 'ec-help-block' }, 'Gold bars are the family\'s education costs each year. The line is the combined fund if you add the extra saving shown above; the dashed line is your current plan.'));
+    // 4. chart
+    root.appendChild(h('h3', { class: 'ec-sub' }, 'Education costs and family savings by year'));
     root.appendChild(chart(fam, ccy));
 
-    // schedule
-    root.appendChild(h('h3', { class: 'ec-sub' }, 'Year-by-year funding schedule'));
-    root.appendChild(schedule(fam, ccy, names));
-
-    // scenarios
-    root.appendChild(h('h3', { class: 'ec-sub' }, 'Lower and higher return scenarios'));
-    root.appendChild(h('p', { class: 'ec-help-block' }, 'Illustrative only — these are not predictions or recommendations. They show how sensitive the plan is to the return you assume.'));
-    root.appendChild(scenarios(ccy));
-
-    // comparison
-    root.appendChild(h('h3', { class: 'ec-sub' }, 'Compare another country or course'));
-    root.appendChild(h('p', { class: 'ec-help-block' }, 'Try an alternative for one child. Your original plan stays as it is.'));
-    root.appendChild(comparison(ccy, names));
+    // 5. schedule
+    root.appendChild(schedule(fam, ccy));
   }
 
-  const kpi = (k, v, cls) => h('div', { class: 'ec-kpi ' + (cls || '') }, [h('dt', null, k), h('dd', null, v)]);
-
-  function breakdown(t, ccy) {
-    const parts = [['Tuition and fees', t.tuitionTotal, 'tuition'], ['Living costs', t.livingTotal, 'living'], ['One-time costs and contingency', t.otherTotal, 'other']];
-    const total = parts.reduce((s, p) => s + p[1], 0) || 1;
-    const scholarships = (lastFamily ? lastFamily.children : []).filter((k) => k.ok).reduce((s, k) => s + k.summary.scholarshipTotal, 0);
+  function breakdown(fam, ccy, a) {
+    const t = fam.totals;
+    const total = t.totalCost;
+    const groups = E.BREAKDOWN.map((g) => ({ key: g.key, value: t.byGroup[g.key] })).filter((g) => g.value > 0.5);
+    const bar = h('div', { class: 'ec-bar', role: 'img', 'aria-label': 'Share of total cost by type' },
+      groups.map((g) => h('span', { style: 'width:' + (total > 0 ? (g.value / total * 100).toFixed(2) : 0) + '%;background:' + GROUP_COLORS[g.key] })));
+    const list = h('ul', { class: 'ec-breakdown-list' }, groups.map((g) => h('li', null, [
+      h('span', { class: 'ec-swatch', style: 'background:' + GROUP_COLORS[g.key], 'aria-hidden': 'true' }),
+      h('span', { class: 'ec-bd-label' }, GROUP_LABELS[g.key]),
+      h('span', { class: 'ec-bd-value' }, money(g.value, ccy)),
+      h('span', { class: 'ec-bd-share' }, total > 0 ? pct(g.value / total, 0) : '')
+    ])));
     return h('div', { class: 'ec-breakdown' }, [
-      h('div', { class: 'ec-bar', role: 'img', 'aria-label': parts.map((p) => p[0] + ' ' + pct(p[1] / total, 0)).join(', ') },
-        parts.map((p) => h('span', { class: 'ec-bar-' + p[2], style: 'flex-basis:' + (p[1] / total * 100).toFixed(2) + '%' }))),
-      h('dl', { class: 'ec-legend' }, parts.map((p) => h('div', null, [h('dt', null, [h('span', { class: 'ec-swatch ec-bar-' + p[2], 'aria-hidden': 'true' }), p[0]]),
-        h('dd', null, money(p[1], ccy) + ' (' + pct(p[1] / total, 0) + ')')])).concat(
-        scholarships > 0 ? [h('div', null, [h('dt', null, 'Less scholarships and grants'), h('dd', null, '−' + money(scholarships, ccy))])] : []))
+      bar, list,
+      h('p', { class: 'ec-bd-total' }, [h('span', null, 'Total'), h('strong', null, money(total, ccy))]),
+      a.coverage > 0 ? h('p', { class: 'ec-help' }, 'Amounts are after ' + pct(a.coverage, 0) + ' of tuition, university fees and living costs (' +
+        money(t.coveredTotal, ccy) + ' in total) is covered by scholarship or part-time work. Visa and travel costs are not reduced.') : null
     ]);
   }
 
-  /* SVG chart: bars = expenses, solid line = required plan balance, dashed = current plan */
-  function chart(fam, ccy) {
-    const NS = 'http://www.w3.org/2000/svg';
-    const s = (tag, attrs) => { const el = document.createElementNS(NS, tag); Object.keys(attrs || {}).forEach((k) => el.setAttribute(k, attrs[k])); return el; };
-    const years = fam.years;
-    const narrow = window.innerWidth < 600;
-    const W = narrow ? 400 : 720, H = narrow ? 260 : 300, L = narrow ? 44 : 64, R = 12, T = 12, B = 34;
-    const svg = s('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'ec-chart', role: 'img',
-      'aria-label': 'Chart of yearly education costs and projected fund balance. Exact values are in the schedule below.' });
-    if (!years.length) return h('p', { class: 'ec-help-block' }, 'Add a child to see the chart.');
-    const maxV = Math.max(1, ...years.map((y) => Math.max(y.expense, y.closingRequired, y.closingCurrent)));
-    const nice = niceMax(maxV);
-    const x = (i) => L + (i + 0.5) * ((W - L - R) / years.length);
-    const y = (v) => T + (H - T - B) * (1 - Math.max(0, v) / nice);
-    const bw = Math.max(2, (W - L - R) / years.length * 0.6);
-    for (let g = 0; g <= 4; g++) {
-      const v = nice * g / 4;
-      svg.appendChild(s('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'ec-grid-line' }));
-      const lab = s('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end', class: 'ec-axis' });
-      lab.textContent = compact(v);
-      svg.appendChild(lab);
-    }
-    years.forEach((yr, i) => {
-      if (yr.expense > 0) svg.appendChild(s('rect', { x: x(i) - bw / 2, y: y(yr.expense), width: bw, height: Math.max(0, H - B - y(yr.expense)), class: 'ec-bar-exp' }));
-      if (years.length <= 12 || i % Math.ceil(years.length / 10) === 0) {
-        const lab = s('text', { x: x(i), y: H - 12, 'text-anchor': 'middle', class: 'ec-axis' });
-        lab.textContent = String(DATA0.planStartYear + i);
-        svg.appendChild(lab);
-      }
-    });
-    const path = (key) => years.map((yr, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(yr[key]).toFixed(1)).join(' ');
-    svg.appendChild(s('path', { d: path('closingCurrent'), class: 'ec-line-current' }));
-    svg.appendChild(s('path', { d: path('closingRequired'), class: 'ec-line-required' }));
-    const legend = h('ul', { class: 'ec-chart-legend' }, [
-      h('li', null, [h('span', { class: 'ec-key ec-key-bar', 'aria-hidden': 'true' }), 'Education costs']),
-      h('li', null, [h('span', { class: 'ec-key ec-key-line', 'aria-hidden': 'true' }), 'Fund with extra saving']),
-      h('li', null, [h('span', { class: 'ec-key ec-key-dash', 'aria-hidden': 'true' }), 'Fund with current plan'])]);
-    return h('figure', { class: 'ec-figure' }, [svg, legend, h('figcaption', { class: 'sr-only' }, 'Values in ' + ccy)]);
-  }
   function niceMax(v) {
+    if (v <= 0) return 1;
     const p = Math.pow(10, Math.floor(Math.log10(v)));
     const m = v / p;
     return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
   }
   function compact(v) {
-    if (v === 0) return '0';
-    const units = [[1e9, 'bn'], [1e6, 'm'], [1e3, 'k']];
-    for (const [d, u] of units) if (v >= d) return (v / d).toFixed(v / d < 10 || !Number.isInteger(v / d) ? 1 : 0).replace(/\.0$/, '') + u;
+    const a = Math.abs(v);
+    if (a >= 1e9) return (v / 1e9).toFixed(a >= 1e10 ? 0 : 1).replace(/\.0$/, '') + 'B';
+    if (a >= 1e6) return (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
+    if (a >= 1e3) return (v / 1e3).toFixed(a >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'k';
     return String(Math.round(v));
   }
 
-  let scheduleView = 'family';
-  function schedule(fam, ccy, names) {
-    const wrap = h('div', { class: 'ec-schedule' });
-    const id = nextId('ec-view');
-    const sel = h('select', { id, 'data-schedule': '1' }, [h('option', { value: 'family' }, 'Whole family')].concat(
-      fam.children.map((k, i) => (i < state.family.numChildren && k.ok ? h('option', { value: String(i) }, names[i]) : null)).filter(Boolean)));
-    sel.value = scheduleView;
-    if (sel.selectedIndex === -1) { scheduleView = 'family'; sel.value = 'family'; }
-    wrap.appendChild(h('div', { class: 'field ec-inline' }, [h('label', { for: id }, 'Show'), sel]));
-    let head, rows;
-    if (scheduleView === 'family') {
-      head = ['Year', 'Education costs', 'Current contributions', 'Extra contributions', 'Fund at year end (with extra)', 'Fund at year end (current plan)', 'Unfunded costs (current plan)'];
-      rows = fam.years.map((y) => [yearLabel(y.p), y.expense, y.existingContrib, y.additionalContrib, y.closingRequired, y.closingCurrent, y.shortfall]);
-    } else {
-      const k = fam.children[Number(scheduleView)];
-      head = ['Year', 'Age', 'Study year', 'Tuition & fees', 'Living', 'One-time & contingency', 'Scholarships', 'Net cost', 'Your contributions', 'Extra contributions', 'Fund at year end (with extra)', 'Unfunded (current plan)'];
-      rows = k.rows.map((r) => [yearLabel(r.p), r.age, r.academicYear ? String(r.academicYear) : '—', r.tuition + r.otherFees, r.living,
-        r.oneTime + r.contingency, r.scholarship, r.expense, r.existingContrib, r.additionalContrib, r.closingRequired, r.shortfall]);
+  // Stacked bars = each child's costs in that year; line = the family's saving that year
+  function chart(fam, ccy) {
+    const years = fam.years;
+    const kids = fam.children.map((k, i) => ({ k, i })).filter((x) => x.k.ok);
+    const W = 760, H = 320, L = 64, R = 16, T = 16, B = 40;
+    const max = niceMax(Math.max(1, ...years.map((y) => Math.max(y.expense, y.saving))));
+    const x0 = (j) => L + j * (W - L - R) / years.length;
+    const bw = Math.max(4, (W - L - R) / years.length * 0.7);
+    const yv = (v) => T + (H - T - B) * (1 - v / max);
+    const g = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'ec-chart', role: 'img',
+      'aria-label': 'Bar chart of education costs per year for each child, with a line for the family\'s yearly savings, in ' + ccy + '.' });
+    for (let t = 0; t <= 4; t++) {
+      const v = max * t / 4;
+      g.appendChild(svg('line', { x1: L, x2: W - R, y1: yv(v), y2: yv(v), class: 'ec-grid-line' }));
+      g.appendChild(svg('text', { x: L - 8, y: yv(v) + 4, 'text-anchor': 'end', class: 'ec-axis' }, [compact(v)]));
     }
-    wrap.appendChild(h('div', { class: 'ec-table-wrap ec-scroll' }, h('table', { class: 'ec-table ec-sched' }, [
-      h('caption', { class: 'ec-caption' }, 'Amounts in ' + ccy + '. Costs are paid at the start of each academic year.'),
-      h('thead', null, h('tr', null, head.map((x, j) => h('th', { scope: 'col', class: j ? 'ec-num' : null }, x)))),
-      h('tbody', null, rows.map((r) => h('tr', { class: r[1] > 0 || (scheduleView !== 'family' && r[7] > 0) ? 'is-study' : null },
-        r.map((v, j) => (j === 0 ? h('th', { scope: 'row' }, v) : h('td', { class: 'ec-num' + (head[j].indexOf('Unfunded') === 0 && v > 0.5 ? ' is-gap' : '') },
-          typeof v === 'number' && head[j] !== 'Age' ? plain(v) : String(v)))))))])));
-    return wrap;
+    const every = Math.ceil(years.length / 12);
+    years.forEach((y, j) => {
+      const cx = x0(j) + ((W - L - R) / years.length - bw) / 2;
+      let base = 0;
+      kids.forEach(({ i }) => {
+        const v = y.byChild[i] || 0;
+        if (v <= 0) return;
+        const rect = svg('rect', { x: cx, width: bw, y: yv(base + v), height: Math.max(0, yv(base) - yv(base + v)), fill: CHILD_COLORS[i % 4] });
+        rect.appendChild(svg('title', {}, [childName(state.children[i], i) + ', ' + academic(y.year) + ': ' + money(v, ccy)]));
+        g.appendChild(rect);
+        base += v;
+      });
+      if (j % every === 0) g.appendChild(svg('text', { x: cx + bw / 2, y: H - B + 16, 'text-anchor': 'middle', class: 'ec-axis' }, [String(y.year)]));
+    });
+    const pts = years.map((y, j) => (x0(j) + (W - L - R) / years.length / 2).toFixed(1) + ',' + yv(y.saving).toFixed(1)).join(' ');
+    g.appendChild(svg('polyline', { points: pts, class: 'ec-line-saving-halo' }));
+    g.appendChild(svg('polyline', { points: pts, class: 'ec-line-saving' }));
+    years.forEach((y, j) => {
+      const dot = svg('circle', { cx: x0(j) + (W - L - R) / years.length / 2, cy: yv(y.saving), r: 3, class: 'ec-dot-saving' });
+      dot.appendChild(svg('title', {}, ['Family savings ' + academic(y.year) + ': ' + money(y.saving, ccy)]));
+      g.appendChild(dot);
+    });
+    g.appendChild(svg('text', { x: L, y: H - 6, class: 'ec-axis' }, ['Year (amounts in ' + ccy + ')']));
+    const legend = h('ul', { class: 'ec-chart-legend' }, kids.map(({ i }) => h('li', null, [
+      h('span', { class: 'ec-key ec-key-bar', style: 'background:' + CHILD_COLORS[i % 4], 'aria-hidden': 'true' }),
+      childName(state.children[i], i) + ' — education costs'
+    ])).concat([h('li', null, [h('span', { class: 'ec-key ec-key-line', 'aria-hidden': 'true' }), 'Required family savings that year'])]));
+    return h('figure', { class: 'ec-figure' }, [g, legend]);
   }
 
-  function scenarios(ccy) {
-    const base = assumptions().returnRate;
-    const spread = DATA0.assumptions.scenarioSpread;
-    const annual = state.family.mode === 'annual';
-    const list = [['Lower return', base - spread], ['Base (your assumption)', base], ['Higher return', base + spread]];
-    return h('div', { class: 'ec-table-wrap' }, h('table', { class: 'ec-table' }, [
-      h('thead', null, h('tr', null, ['Scenario', 'Return', annual ? 'Extra per year' : 'Extra per month', 'Up-front amount', 'Covered by current plan']
-        .map((x, j) => h('th', { scope: 'col', class: j ? 'ec-num' : null }, x)))),
-      h('tbody', null, list.map(([lab, r]) => {
-        const f = r <= -0.99 ? null : E.projectFamily(data(), scenario(r));
-        return h('tr', null, [h('th', { scope: 'row' }, lab), h('td', { class: 'ec-num' }, pct(r)),
-          h('td', { class: 'ec-num' }, f ? money(annual ? f.totals.requiredAnnualFirstYear : f.totals.requiredMonthlyFirstYear, ccy) : '—'),
-          h('td', { class: 'ec-num' }, f ? money(f.totals.requiredLumpNow, ccy) : '—'),
-          h('td', { class: 'ec-num' }, f ? pct(f.totals.coverage, 0) : '—')]);
-      }))]));
+  function schedule(fam, ccy) {
+    const rows = fam.years.map((y) => h('tr', { class: y.studying.length ? 'is-study' : null }, [
+      h('th', { scope: 'row' }, academic(y.year)),
+      h('td', null, y.studying.length ? y.studying.map((i) => childName(state.children[i], i)).join(', ') : '—'),
+      h('td', { class: 'ec-num' }, y.expense > 0.5 ? money(y.expense, ccy) : '—'),
+      h('td', { class: 'ec-num' }, y.saving > 0.5 ? money(y.saving, ccy) : '—'),
+      h('td', { class: 'ec-num' }, money(Math.max(0, y.fund), ccy))
+    ]));
+    return h('details', { class: 'ec-schedule', open: fam.years.length <= 12 }, [
+      h('summary', null, 'Year-by-year plan (' + fam.years.length + ' years)'),
+      h('p', { class: 'ec-help-block' }, 'This table shows when education expenses may occur and how much the family may need to save in each year.'),
+      h('div', { class: 'ec-table-wrap ec-scroll' }, h('table', { class: 'ec-table' }, [
+        h('thead', null, h('tr', null, ['Year', 'Child or children studying', 'Estimated education expenses', 'Suggested family savings', 'Remaining education fund']
+          .map((t, k) => h('th', { scope: 'col', class: k > 1 ? 'ec-num' : null }, t)))),
+        h('tbody', null, rows)
+      ])),
+      h('p', { class: 'ec-help' }, 'Expenses are paid at the start of each year and savings are added at the end, so the remaining fund is the balance after that year\'s saving.')
+    ]);
   }
 
-  function comparison(ccy, names) {
-    const box = h('div', { class: 'ec-compare' });
-    const n = state.family.numChildren;
-    const childSel = h('select', { id: 'ec-cmp-child' }, state.children.slice(0, n).map((c, i) => h('option', { value: String(i) }, names[i])));
-    const ctySel = h('select', { id: 'ec-cmp-country' }, countries.map((c) => h('option', { value: c }, c)));
-    const qSel = h('select', { id: 'ec-cmp-qual' }, DATA0.qualifications.map((q) => h('option', { value: q }, q)));
-    const first = state.children[0];
-    ctySel.value = childCountry(first) === 'UK' ? 'Germany' : 'UK';
-    qSel.value = first.qualification || 'Computer Science';
-    box.appendChild(h('div', { class: 'ec-compare-form' }, [
-      h('div', { class: 'field' }, [h('label', { for: 'ec-cmp-child' }, 'Child'), childSel]),
-      h('div', { class: 'field' }, [h('label', { for: 'ec-cmp-country' }, 'Country'), ctySel]),
-      h('div', { class: 'field' }, [h('label', { for: 'ec-cmp-qual' }, 'Qualification'), qSel]),
-      h('button', { type: 'button', class: 'btn btn-secondary', 'data-action': 'add-compare' }, 'Add comparison')]));
-    const a = assumptions();
-    const annual = a.contributionMode === 'annual';
-    const rows = [];
-    state.children.slice(0, n).forEach((c, i) => {
-      const k = lastFamily.children[i];
-      if (k && k.ok) rows.push(cmpRow(names[i] + ' — your plan', childCountry(c), c.qualification, k, ccy, annual, null));
-    });
-    state.comparisons.forEach((cmp, j) => {
-      const c = state.children[cmp.child];
-      if (!c || cmp.child >= n) return;
-      const info = E.countryInfo(DATA0, cmp.country);
-      const alt = engineChild(c, { country: cmp.country, qualification: cmp.qualification, category: info.defaultCategory,
-        benchmark: 'average', duration: null, overrides: {} });
-      const k = E.projectChild(data(), alt, a, familyDefaults().reportingCurrency);
-      rows.push(cmpRow(names[cmp.child] + ' — alternative', cmp.country, cmp.qualification, k, ccy, annual, j));
-    });
-    box.appendChild(h('div', { class: 'ec-table-wrap' }, h('table', { class: 'ec-table' }, [
-      h('thead', null, h('tr', null, ['Option', 'Country', 'Qualification', 'Total cost', annual ? 'Extra per year' : 'Extra per month', 'Benchmark', ''].map((x, j) =>
-        h('th', { scope: 'col', class: j >= 3 && j <= 4 ? 'ec-num' : null }, x)))),
-      h('tbody', null, rows)])));
-    return box;
-  }
-  function cmpRow(label, country, qual, k, ccy, annual, idx) {
-    if (!k.ok) return h('tr', null, [h('th', { scope: 'row' }, label), h('td', { colspan: 6 }, k.errors.join(' '))]);
-    return h('tr', { class: idx === null ? 'is-base' : null }, [h('th', { scope: 'row' }, label), h('td', null, country), h('td', null, qual),
-      h('td', { class: 'ec-num' }, money(k.summary.totalCost, ccy)),
-      h('td', { class: 'ec-num' }, money(annual ? k.summary.requiredAnnualFirstYear : k.summary.requiredMonthlyFirstYear, ccy)),
-      h('td', null, k.costs.hasTuitionData ? k.costs.benchmarkLabel : 'No fee data'),
-      h('td', null, idx === null ? '' : h('button', { type: 'button', class: 'ec-link-btn', 'data-remove-compare': idx, 'aria-label': 'Remove comparison' }, 'Remove'))]);
+  /* ---------- Step 4: compare countries ---------- */
+  function renderCompare() {
+    const root = clear($('#ec-compare'));
+    const kids = activeKids();
+    if (state.compare.child >= kids.length) state.compare.child = 0;
+    const idx = state.compare.child;
+    const c = state.children[idx];
+    const ccy = reportingCurrency();
+    const selId = nextId('ec-cmp');
+    root.appendChild(h('div', { class: 'ec-compare-form' }, [
+      h('div', { class: 'field ec-field' }, [
+        h('label', { for: selId }, 'Child'),
+        h('select', { id: selId, 'data-compare': 'child' }, kids.map((k, i) => h('option', { value: i, selected: i === idx }, childName(k, i))))
+      ]),
+      h('div', { class: 'field ec-field' }, [h('span', { class: 'ec-field-label' }, 'Qualification'), h('p', { class: 'ec-readonly' }, c.qualification)]),
+      h('fieldset', { class: 'ec-check-group' }, [
+        h('legend', null, 'Countries to compare'),
+        h('div', { class: 'ec-checks' }, COUNTRIES.map((name) => {
+          const id = nextId('ec-cc');
+          return h('label', { for: id, class: 'ec-check' }, [
+            h('input', { type: 'checkbox', id, value: name, 'data-compare': 'country', checked: state.compare.countries.indexOf(name) !== -1 }), name
+          ]);
+        }))
+      ])
+    ]));
+    const list = E.compareCountries(DATA0, engineChild(c), familyInput(), assumptions(), COUNTRIES.filter((n) => state.compare.countries.indexOf(n) !== -1));
+    const body = h('tbody', null, list.map((r) => {
+      const current = r.country === c.country;
+      let value, tag = null;
+      if (!r.available) { value = 'Not available'; tag = r.reason; }
+      else {
+        value = money(r.totalCost, ccy);
+        if (r.hasMissing) tag = 'Some costs have no figure yet — total is incomplete';
+        else if (r.status === 'estimated') tag = 'Estimate — no published fee for this course';
+      }
+      return h('tr', { class: current ? 'is-base' : null }, [
+        h('th', { scope: 'row' }, [r.country, current ? h('span', { class: 'ec-tag' }, 'Current plan') : null]),
+        h('td', { class: 'ec-num' }, [h('span', { class: 'ec-strong' }, value), tag ? h('span', { class: 'ec-help ec-cmp-note' }, tag) : null]),
+        h('td', null, !current && r.available ? h('button', { type: 'button', class: 'btn btn-sm ec-btn-outline', 'data-action': 'use-country',
+          'data-country': r.country, 'data-child': idx }, 'Use ' + r.country + ' for ' + childName(c, idx)) : null)
+      ]);
+    }));
+    root.appendChild(h('div', { class: 'ec-table-wrap' }, h('table', { class: 'ec-table ec-compare' }, [
+      h('thead', null, h('tr', null, [h('th', { scope: 'col' }, 'Country'), h('th', { scope: 'col', class: 'ec-num' }, 'Total estimated education cost (' + ccy + ')'), h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Action'))])),
+      body
+    ])));
+    root.appendChild(h('p', { class: 'ec-help-block' }, 'Each total covers the full course in that country (its usual length), at future prices, after your scholarship / part-time-work percentage. Your own cost edits are not carried over, because they are in another country\'s currency.'));
   }
 
   /* ---------- update cycle ---------- */
-  function update(opts) {
-    validate();
+  function validateInline() {
+    $$('.ec-child').forEach((fs) => {
+      const i = Number(fs.dataset.child);
+      const c = state.children[i];
+      const entry = $('[data-path="children.' + i + '.entryAge"]', fs);
+      const err = entry && document.getElementById(entry.getAttribute('aria-describedby').split(' ').pop());
+      const bad = !(isNum(c.entryAge) && c.entryAge >= 14 && c.entryAge <= 45 && Math.round(c.entryAge) === c.entryAge);
+      if (entry) entry.setAttribute('aria-invalid', bad ? 'true' : 'false');
+      if (err) err.textContent = bad ? 'Enter a whole number from 14 to 45.' : '';
+    });
+  }
+
+  function refresh(structural) {
+    if (structural) {
+      updateChildDynamic();
+      renderPlans();
+      renderAssumptions();
+    }
+    validateInline();
     const fam = compute();
     renderRail(fam);
-    if (opts && opts.plans) renderPlans();
-    if (step === 4) renderResults(fam);
+    if (step === 3) renderResults(fam);
+    if (step === 4) renderCompare();
   }
 
   function goTo(n, focus) {
-    step = Math.min(5, Math.max(1, n));
+    step = Math.max(1, Math.min(5, n));
     $$('[data-step-panel]').forEach((p) => { p.hidden = Number(p.dataset.stepPanel) !== step; });
-    $$('.ec-steps button').forEach((b) => { if (Number(b.dataset.step) === step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+    $$('.ec-steps button').forEach((b) => {
+      if (Number(b.dataset.step) === step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    });
     $('[data-nav="prev"]').hidden = step === 1;
-    const next = $('[data-nav="next"]');
-    next.hidden = step === 5;
-    next.textContent = step === 3 ? 'See results' : 'Next';
-    if (step === 2) renderPlans();
-    if (step === 3) renderAssumptions();
-    update();
+    $('[data-nav="next"]').hidden = step === 5;
+    if (step === 2) { renderPlans(); renderCoverage(); renderAssumptions(); }
+    const fam = compute();
+    renderRail(fam);
+    if (step === 3) renderResults(fam);
+    if (step === 4) renderCompare();
     if (focus) {
-      const heading = $('[data-step-panel="' + step + '"] h2');
-      heading.setAttribute('tabindex', '-1');
-      heading.focus({ preventScroll: true });
-      $('#ec-app').scrollIntoView({ behavior: 'auto', block: 'start' });
+      const head = $('#ec-h' + step);
+      $('#ec-app').scrollIntoView({ block: 'start' });
+      head.focus({ preventScroll: true });
     }
   }
 
-  function readInput(el) {
-    const path = el.dataset.path;
-    let v;
+  function readValue(el) {
     if (el.tagName === 'SELECT') {
-      v = el.value;
-      if (path === 'family.numChildren') v = Number(v);
-    } else if (el.type === 'number') {
-      v = el.value === '' ? null : Number(el.value);
-      if (v !== null && !isFinite(v)) v = null;
-      const zeroIfBlank = /\.(savings|monthly|annual|schPct|schFixed|otherFunding)$/.test(path);
-      if (v === null && zeroIfBlank) v = 0;
-    } else v = el.value;
-    if (path.indexOf('fx.') === 0 && (v === null || v <= 0)) v = null;
-    setPath(path, v);
-    return path;
+      const v = el.value;
+      return /^-?\d+(\.\d+)?$/.test(v) && !/^(family\.(residence|nationality|repCcy)|children\.\d+\.(country|qualification))$/.test(el.dataset.path) ? Number(v) : v;
+    }
+    if (el.type === 'text') return el.value.slice(0, 40);
+    if (el.value === '') return null;
+    const n = Number(el.value);
+    return isFinite(n) ? n : null;
   }
 
   function onInput(e) {
     const el = e.target;
-    if (el.dataset.path) {
-      const path = readInput(el);
-      syncInputs(document, el);
-      const structural = /^family\.(numChildren|eduCountry|repCcy)$|\.(country|qualification|category|benchmark)$/.test(path);
-      if (structural && e.type === 'change') {
-        if (path === 'family.repCcy' || path === 'family.eduCountry') refreshCurrencySuffixes();
-        updateChildDynamic();
-        if (step === 3) renderAssumptions();
-      }
-      if (/\.(name|age|entryAge)$/.test(path)) updateChildDynamic();
-      update();
+    if (el.dataset.cost) {
+      const i = Number(el.dataset.child);
+      const v = el.value === '' ? null : Number(el.value);
+      const ov = state.children[i].overrides;
+      if (v === null || !isFinite(v) || v < 0) delete ov[el.dataset.cost];
+      else ov[el.dataset.cost] = v;
+      const row = el.closest('tr');
+      if (row && e.type === 'change') renderPlans();
+      else if (row) row.classList.add('is-override');
+      refresh(false);
       return;
     }
-    if (el.dataset.override !== undefined) {
-      const i = Number(el.dataset.override), f = el.dataset.field;
-      const c = state.children[i];
-      c.overrides = c.overrides || {};
-      if (el.value === '' || !isFinite(Number(el.value)) || Number(el.value) < 0) delete c.overrides[f];
-      else c.overrides[f] = Number(el.value);
-      if (e.type === 'change') { renderPlans(); const again = $('[data-override="' + i + '"][data-field="' + f + '"]'); if (again) again.focus(); }
-      update();
+    if (el.dataset.compare) {
+      if (el.dataset.compare === 'child') state.compare.child = Number(el.value);
+      else state.compare.countries = $$('[data-compare="country"]').filter((x) => x.checked).map((x) => x.value);
+      renderCompare();
       return;
     }
-    if (el.dataset.schedule) { scheduleView = el.value; renderResults(lastFamily); const s = $('[data-schedule]'); if (s) s.focus(); }
+    if (!el.dataset.path) return;
+    const path = el.dataset.path;
+    let v = readValue(el);
+    if (path === 'family.coverage' && v !== null) v = Math.max(0, Math.min(100, v));
+    // a different country or qualification means the old cost edits no longer apply
+    if (/^children\.\d+\.(country|qualification)$/.test(path) && getPath(path) !== v) {
+      const i = Number(path.split('.')[1]);
+      state.children[i].overrides = {};
+    }
+    setPath(path, v);
+    if (path === 'family.coverage') syncInputs($('#ec-coverage'));
+    if (/\.name$/.test(path)) updateChildDynamic();
+    refresh(el.dataset.structural === '1' && e.type === 'change' || el.tagName === 'SELECT');
   }
 
+  /* ---------- Start again ---------- */
+  const dialog = $('#ec-reset-dialog');
+  let dialogReturn = null;
+  function openReset() {
+    dialogReturn = document.activeElement;
+    if (dialog.showModal) dialog.showModal();
+    else if (window.confirm(dialog.querySelector('#ec-reset-text').textContent)) doReset();
+    const cancel = $('[data-dialog="cancel"]', dialog);
+    if (cancel) cancel.focus();
+  }
+  function closeReset() {
+    if (dialog.open) dialog.close();
+    if (dialogReturn) dialogReturn.focus();
+  }
+  function doReset() {
+    // resets the form only; a plan saved in this browser is kept
+    state = freshState();
+    renderBasic();
+    renderChildren();
+    renderCoverage();
+    goTo(1);
+    status('Everything has been cleared. A plan you saved in this browser is still there.', true);
+  }
+
+  /* ---------- save, load, export ---------- */
   function status(msg, ok) {
-    const s = $('#ec-status');
-    s.textContent = msg;
-    s.className = 'form-status ' + (ok ? 'is-success' : 'is-error');
+    const el = $('#ec-status');
+    el.className = 'form-status ' + (ok ? 'is-success' : 'is-error');
+    el.textContent = msg;
   }
 
   function download(name, text, type) {
-    const blob = new Blob([text], { type });
-    const a = h('a', { href: URL.createObjectURL(blob), download: name });
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const a = h('a', { href: url, download: name });
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+  }
+
+  function csvCell(v) {
+    const s = String(v === null || v === undefined ? '' : v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
 
   function csv() {
-    const fam = lastFamily;
-    const ccy = familyDefaults().reportingCurrency;
-    const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
-    const lines = [['Children\'s Future Education Fund Calculator — Sindhi Connect'], ['Reporting currency', ccy],
-      ['Exchange rates as of', DATA0.exchangeRates.date], ['Estimates only. Returns are assumptions, not guarantees.'], [],
-      ['Child', 'Country', 'Qualification', 'Years to college', 'First-year cost', 'Total cost', 'Savings at college start',
-        'Extra per month (year 1)', 'Extra per year (year 1)', 'Up-front amount now', 'Coverage with current plan', 'Surplus or gap']];
+    const fam = lastFamily || compute();
+    const ccy = reportingCurrency();
+    const lines = [['Children\'s Future Education Fund — plan (' + ccy + ')'], [],
+      ['Total education fund required', Math.round(fam.totals.totalCost)],
+      ['Required yearly savings (this year)', Math.round(fam.totals.firstYearSaving)],
+      ['Amount needed now', Math.round(fam.totals.lumpNow)], [],
+      ['Child', 'Country', 'Qualification', 'Education starts in (years)', 'Total estimated education cost']];
     fam.children.forEach((k, i) => {
-      if (i >= state.family.numChildren) return;
       const c = state.children[i];
-      if (!k.ok) { lines.push([c.name || 'Child ' + (i + 1), 'Invalid: ' + k.errors.join(' ')]); return; }
-      const s = k.summary;
-      lines.push([c.name || 'Child ' + (i + 1), k.costs.country, c.qualification, s.yearsToCollege, s.costAtStart.toFixed(2), s.totalCost.toFixed(2),
-        (s.fvSavingsAtStart + s.fvContributionsAtStart).toFixed(2), s.requiredMonthlyFirstYear === null ? 'n/a' : s.requiredMonthlyFirstYear.toFixed(2),
-        s.requiredAnnualFirstYear.toFixed(2), s.requiredLumpNow.toFixed(2), (s.coverage * 100).toFixed(1) + '%', s.surplusOrGap.toFixed(2)]);
+      lines.push([childName(c, i), c.country, c.qualification, k.ok ? k.summary.yearsToCollege : '', k.ok ? Math.round(k.summary.totalCost) : 'not calculated']);
     });
-    lines.push([], ['Year', 'Child', 'Age', 'Study year', 'Tuition & fees', 'Living', 'One-time & contingency', 'Scholarships', 'Net cost',
-      'Existing contributions', 'Extra contributions', 'Fund at year end (with extra)', 'Fund at year end (current plan)', 'Unfunded (current plan)']);
-    fam.children.forEach((k, i) => {
-      if (i >= state.family.numChildren || !k.ok) return;
-      k.rows.forEach((r) => lines.push([yearLabel(r.p), state.children[i].name || 'Child ' + (i + 1), r.age, r.academicYear || '',
-        (r.tuition + r.otherFees).toFixed(2), r.living.toFixed(2), (r.oneTime + r.contingency).toFixed(2), r.scholarship.toFixed(2),
-        r.expense.toFixed(2), r.existingContrib.toFixed(2), r.additionalContrib.toFixed(2), r.closingRequired.toFixed(2),
-        r.closingCurrent.toFixed(2), r.shortfall.toFixed(2)]));
-    });
-    download('education-fund-plan.csv', '﻿' + lines.map((l) => l.map(q).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
-    status('CSV exported.', true);
+    lines.push([], ['Year', 'Children studying', 'Estimated education expenses', 'Suggested family savings', 'Remaining education fund']);
+    fam.years.forEach((y) => lines.push([academic(y.year), y.studying.map((i) => childName(state.children[i], i)).join('; '),
+      Math.round(y.expense), Math.round(y.saving), Math.round(Math.max(0, y.fund))]));
+    download('education-fund-plan.csv', lines.map((r) => r.map(csvCell).join(',')).join('\n'), 'text/csv');
   }
 
   function backup() {
-    const payload = { app: 'sindhi-connect-education-calculator', dataset: DATA0.version, savedAt: new Date().toISOString(), state };
-    download('education-fund-backup.json', JSON.stringify(payload, null, 2), 'application/json');
-    status('Backup downloaded.', true);
+    download('education-fund-plan.json', JSON.stringify({ app: 'sindhi-connect-education-calculator', version: 2, state }, null, 1), 'application/json');
   }
 
-  // Accept only known fields with the right types, so a tampered file cannot inject anything odd.
+  // Accept only known fields with sensible values from a loaded file
   function sanitize(raw) {
-    const s = exampleState();
-    if (!raw || typeof raw !== 'object') throw new Error('bad');
+    const s = freshState();
+    if (!raw || typeof raw !== 'object') return s;
+    const num = (v, lo, hi) => (typeof v === 'number' && isFinite(v) && v >= lo && v <= hi ? v : null);
     const f = raw.family || {};
-    const numOrNull = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
-    const str = (v, max) => (typeof v === 'string' ? v.slice(0, max || 80) : '');
-    s.family.numChildren = [1, 2, 3, 4].indexOf(f.numChildren) !== -1 ? f.numChildren : 1;
-    s.family.label = str(f.label); s.family.residence = str(f.residence);
-    s.family.eduCountry = countries.indexOf(f.eduCountry) !== -1 ? f.eduCountry : 'Pakistan';
-    s.family.repCcy = DATA0.currencies.indexOf(f.repCcy) !== -1 ? f.repCcy : '';
-    ['entryAge', 'ret', 'tuiInf', 'livInf', 'esc', 'cont', 'fxDrift'].forEach((k) => { s.family[k] = numOrNull(f[k]); });
-    s.family.mode = f.mode === 'annual' ? 'annual' : 'monthly';
-    s.fx = {};
-    Object.keys(raw.fx || {}).forEach((c) => { if (DATA0.currencies.indexOf(c) !== -1 && numOrNull(raw.fx[c]) > 0) s.fx[c] = raw.fx[c]; });
-    s.children = [0, 1, 2, 3].map((i) => {
-      const c = (raw.children || [])[i] || {};
-      const k = kidDefaults();
-      k.name = str(c.name, 40); k.schoolClass = str(c.schoolClass, 40); k.custom = str(c.custom); k.specialisation = str(c.specialisation);
-      k.age = numOrNull(c.age); k.entryAge = numOrNull(c.entryAge); k.duration = numOrNull(c.duration);
-      k.country = countries.indexOf(c.country) !== -1 ? c.country : '';
-      k.qualification = DATA0.qualifications.indexOf(c.qualification) !== -1 ? c.qualification : 'Computer Science';
-      k.category = typeof c.category === 'string' ? c.category.slice(0, 60) : '';
-      k.benchmark = c.benchmark === 'average' || DATA0.records.some((r) => r.id === c.benchmark) ? c.benchmark : 'average';
-      ['savings', 'monthly', 'annual', 'schPct', 'schFixed', 'otherFunding'].forEach((x) => { k[x] = numOrNull(c[x]) || 0; });
-      k.overrides = {};
-      Object.keys(c.overrides || {}).forEach((x) => { if (E.COST_FIELDS.indexOf(x) !== -1 && numOrNull(c.overrides[x]) !== null) k.overrides[x] = c.overrides[x]; });
-      return k;
+    s.family.numChildren = num(f.numChildren, 1, 4) || 1;
+    if (PLACES.indexOf(f.residence) !== -1) s.family.residence = f.residence;
+    if (PLACES.indexOf(f.nationality) !== -1) s.family.nationality = f.nationality;
+    if (DATA0.currencies.indexOf(f.repCcy) !== -1) s.family.repCcy = f.repCcy;
+    s.family.coverage = num(f.coverage, 0, 100) || 0;
+    s.family.ret = num(f.ret, -50, 30);
+    s.family.savInc = num(f.savInc, 0, 20) || 0;
+    Object.keys(raw.fx || {}).forEach((c) => { if (DATA0.currencies.indexOf(c) !== -1 && num(raw.fx[c], 1e-9, 1e9)) s.fx[c] = raw.fx[c]; });
+    (raw.children || []).slice(0, 4).forEach((c, i) => {
+      if (!c || typeof c !== 'object') return;
+      const k = s.children[i];
+      if (typeof c.name === 'string') k.name = c.name.slice(0, 40);
+      const age = num(c.age, 0, 18); if (age !== null) k.age = Math.round(age);
+      const sc = num(c.schoolClass, 0, 13); if (sc !== null) k.schoolClass = Math.round(sc);
+      if (COUNTRIES.indexOf(c.country) !== -1) k.country = c.country;
+      if (QUALS.indexOf(c.qualification) !== -1) k.qualification = c.qualification;
+      const ea = num(c.entryAge, 14, 45); if (ea !== null) k.entryAge = Math.round(ea);
+      k.tInf = num(c.tInf, -10, 30);
+      k.lInf = num(c.lInf, -10, 30);
+      Object.keys(c.overrides || {}).forEach((key) => {
+        if ((E.ITEM_KEYS.indexOf(key) !== -1 || key === 'preTuition' || key === 'preOtherFees') && num(c.overrides[key], 0, 1e12) !== null) k.overrides[key] = c.overrides[key];
+      });
     });
-    s.comparisons = (Array.isArray(raw.comparisons) ? raw.comparisons : []).slice(0, 6).filter((c) =>
-      c && [0, 1, 2, 3].indexOf(c.child) !== -1 && countries.indexOf(c.country) !== -1 && DATA0.qualifications.indexOf(c.qualification) !== -1);
     return s;
   }
 
   function loadState(s) {
     state = s;
-    renderFamily(); renderChildren(); syncInputs(document);
-    goTo(1);
-  }
-
-  function onClick(e) {
-    const t = e.target.closest('button, a');
-    if (!t) return;
-    if (t.dataset.step) { goTo(Number(t.dataset.step), true); return; }
-    if (t.dataset.goto) { goTo(Number(t.dataset.goto), true); return; }
-    if (t.dataset.nav) { goTo(step + (t.dataset.nav === 'next' ? 1 : -1), true); return; }
-    if (t.dataset.clearOverrides !== undefined) { state.children[Number(t.dataset.clearOverrides)].overrides = {}; renderPlans(); update(); return; }
-    if (t.dataset.removeCompare !== undefined) { state.comparisons.splice(Number(t.dataset.removeCompare), 1); renderResults(lastFamily); return; }
-    const act = t.dataset.action;
-    if (!act) return;
-    if (act === 'add-compare') {
-      state.comparisons.push({ child: Number($('#ec-cmp-child').value), country: $('#ec-cmp-country').value, qualification: $('#ec-cmp-qual').value });
-      renderResults(lastFamily);
-      const b = $('[data-action="add-compare"]'); if (b) b.focus();
-    } else if (act === 'print') { buildPrint(); window.print(); }
-    else if (act === 'csv') csv();
-    else if (act === 'json') backup();
-    else if (act === 'save') {
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); status('Plan saved in this browser.', true); }
-      catch (err) { status('This browser blocked saving. Use "Download backup" instead.', false); }
-    } else if (act === 'restore') {
-      try {
-        const raw = localStorage.getItem(STORE_KEY);
-        if (!raw) { status('No saved plan found in this browser.', false); return; }
-        loadState(sanitize(JSON.parse(raw))); goTo(5); status('Saved plan reloaded.', true);
-      } catch (err) { status('The saved plan could not be read. Start again or load a backup file.', false); }
-    } else if (act === 'reset') {
-      if (!window.confirm('Clear all inputs and return to the example plan?')) return;
-      try { localStorage.removeItem(STORE_KEY); } catch (err) { /* storage unavailable */ }
-      loadState(exampleState()); goTo(1, true);
-    }
+    renderBasic();
+    renderChildren();
+    renderCoverage();
+    refresh(true);
   }
 
   function onLoadFile(e) {
@@ -933,54 +888,83 @@
     reader.onload = () => {
       try {
         const raw = JSON.parse(reader.result);
-        if (raw.app !== 'sindhi-connect-education-calculator') throw new Error('not ours');
+        if (raw.app !== 'sindhi-connect-education-calculator' || raw.version !== 2) throw new Error('not ours');
         loadState(sanitize(raw.state)); goTo(5); status('Backup loaded.', true);
-      } catch (err) { status('This file is not a calculator backup. Choose a file saved with "Download backup".', false); }
+      } catch (err) { status('This file is not a backup from this version of the calculator.', false); }
       e.target.value = '';
     };
     reader.readAsText(file);
   }
 
+  function onClick(e) {
+    const t = e.target.closest('button, [data-goto]');
+    if (!t) return;
+    if (t.dataset.step) { goTo(Number(t.dataset.step), true); return; }
+    if (t.dataset.goto) { goTo(Number(t.dataset.goto), true); return; }
+    if (t.dataset.nav) { goTo(step + (t.dataset.nav === 'next' ? 1 : -1), true); return; }
+    if (t.dataset.dialog === 'cancel') { closeReset(); return; }
+    if (t.dataset.dialog === 'confirm') { closeReset(); doReset(); return; }
+    const act = t.dataset.action;
+    if (!act) return;
+    if (act === 'reset') openReset();
+    else if (act === 'undo') {
+      setPath(t.dataset.path, null);
+      renderPlans();
+      refresh(false);
+    } else if (act === 'use-country') {
+      const i = Number(t.dataset.child);
+      state.children[i].country = t.dataset.country;
+      state.children[i].overrides = {};
+      updateChildDynamic();
+      syncInputs($('#ec-children'));
+      refresh(true);
+      renderCompare();
+    } else if (act === 'print') window.print();
+    else if (act === 'csv') csv();
+    else if (act === 'json') backup();
+    else if (act === 'save') {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); status('Plan saved in this browser.', true); }
+      catch (err) { status('This browser did not allow saving. Use "Download backup" instead.', false); }
+    } else if (act === 'restore') {
+      try {
+        const raw = localStorage.getItem(STORE_KEY);
+        if (!raw) { status('No saved plan found in this browser.', false); return; }
+        loadState(sanitize(JSON.parse(raw))); goTo(5); status('Saved plan loaded.', true);
+      } catch (err) { status('The saved plan could not be read.', false); }
+    }
+  }
+
   /* ---------- print report ---------- */
   function buildPrint() {
     const root = clear($('#ec-print'));
-    const fam = lastFamily;
-    const ccy = familyDefaults().reportingCurrency;
+    const fam = lastFamily || compute();
+    const ccy = reportingCurrency();
     const a = assumptions();
-    const names = state.children.map((c, i) => c.name || 'Child ' + (i + 1));
     root.append(
-      h('h1', null, "Children's Future Education Fund — plan report"),
-      h('p', null, (state.family.label ? state.family.label + '. ' : '') + 'Prepared ' + new Date().toLocaleDateString('en-GB') +
-        ' with the Sindhi Connect calculator. Amounts in ' + ccy + '.'),
+      h('h1', null, 'Children\'s Future Education Fund — plan'),
+      h('p', null, 'Prepared ' + new Date().toLocaleDateString('en-GB') + ' with the Sindhi Connect calculator. Amounts in ' + ccy + '.'),
       h('p', { class: 'ec-print-note' }, DATA0.disclaimer),
-      h('h2', null, 'Summary'),
       h('table', null, h('tbody', null, [
-        ['Total estimated future education cost', money(fam.totals.totalCost, ccy)],
-        ['Extra saving needed ' + (a.contributionMode === 'annual' ? 'per year' : 'per month') + ' (year 1)',
-          money(a.contributionMode === 'annual' ? fam.totals.requiredAnnualFirstYear : fam.totals.requiredMonthlyFirstYear, ccy)],
-        ['Up-front amount needed now', money(fam.totals.requiredLumpNow, ccy)],
-        ['Projected value of current savings and contributions at college start', money(fam.totals.projectedExisting, ccy)],
-        ['Coverage with current plan', pct(fam.totals.coverage, 0)],
-        [fam.totals.surplusOrGap < 0 ? 'Funding gap' : 'Projected surplus', money(Math.abs(fam.totals.surplusOrGap), ccy)]
+        ['Total education fund required', money(fam.totals.totalCost, ccy)],
+        ['Required yearly savings (this year)', money(fam.totals.firstYearSaving, ccy)],
+        ['Amount needed now', money(fam.totals.lumpNow, ccy)],
+        ['Covered by scholarship / part-time work', pct(a.coverage, 0)],
+        ['Investment return; yearly increase in savings', pct(a.returnRate) + '; ' + pct(a.savingsIncrease)],
+        ['Nationality; country of residence', state.family.nationality + '; ' + state.family.residence]
       ].map((r) => h('tr', null, [h('th', null, r[0]), h('td', null, r[1])])))),
-      h('h2', null, 'Assumptions'),
-      h('p', null, 'Return ' + pct(a.returnRate) + ', tuition inflation ' + pct(a.tuitionInflation) + ', living-cost inflation ' + pct(a.livingInflation) +
-        ', contribution increase ' + pct(a.contributionEscalation) + ' a year, contingency ' + pct(a.contingency) + ', exchange-rate change ' +
-        pct(a.fxDrift) + ' a year, ' + a.contributionMode + ' contributions. Exchange rates as of ' + DATA0.exchangeRates.date + '.')
+      h('h2', null, 'Each child')
     );
     fam.children.forEach((k, i) => {
-      if (i >= state.family.numChildren) return;
-      root.appendChild(h('h2', null, names[i]));
-      if (!k.ok) { root.appendChild(h('p', null, 'Not calculated: ' + k.errors.join(' '))); return; }
-      const s = k.summary;
-      root.appendChild(h('p', null, k.costs.country + ', ' + state.children[i].qualification + ' (' + k.costs.studentCategory + '). Benchmark: ' +
-        k.costs.benchmarkLabel + (k.costs.overridden.length ? '. User overrides: ' + k.costs.overridden.map((f) => COST_LABELS[f]).join(', ') : '') +
-        '. Total cost ' + money(s.totalCost, ccy) + '; extra saving ' + money(s.requiredAnnualFirstYear, ccy) + ' in year 1' +
-        (s.requiredLumpNow > 0.5 ? ' plus ' + money(s.requiredLumpNow, ccy) + ' now' : '') + '.'));
-      root.appendChild(h('table', null, [h('thead', null, h('tr', null, ['Year', 'Age', 'Net cost', 'Your contributions', 'Extra contributions', 'Fund at year end'].map((x) => h('th', null, x)))),
-        h('tbody', null, k.rows.map((r) => h('tr', null, [yearLabel(r.p), r.age, plain(r.expense), plain(r.existingContrib), plain(r.additionalContrib), plain(r.closingRequired)].map((v) => h('td', null, String(v))))))]));
-      root.appendChild(h('p', { class: 'ec-print-note' }, 'Sources: ' + k.costs.sources.map((x) => x.label + ' (' + x.url + ')').join('; ')));
+      const c = state.children[i];
+      if (!k.ok) { root.appendChild(h('p', null, childName(c, i) + ': not calculated — ' + k.errors.join(' '))); return; }
+      root.appendChild(h('p', null, childName(c, i) + ' — ' + c.qualification + ' in ' + c.country + ', ' + yearsText(k.duration.used) +
+        ', starting ' + academic(k.summary.startYear) + ': total ' + money(k.summary.totalCost, ccy) + '. Fee increase ' + pct(k.costs.tuitionInflation) +
+        ' a year, living costs ' + pct(k.costs.livingInflation) + ' a year.'));
     });
+    root.appendChild(h('h2', null, 'Year-by-year plan'));
+    root.appendChild(h('table', null, [h('thead', null, h('tr', null, ['Year', 'Studying', 'Education expenses', 'Family savings', 'Remaining fund'].map((x) => h('th', null, x)))),
+      h('tbody', null, fam.years.map((y) => h('tr', null, [academic(y.year), y.studying.map((i) => childName(state.children[i], i)).join(', '),
+        plain(y.expense), plain(y.saving), plain(Math.max(0, y.fund))].map((v) => h('td', null, String(v))))))]));
   }
 
   /* ---------- init ---------- */
@@ -988,13 +972,14 @@
     const dd = new Date(DATA0.datasetDate + 'T00:00:00');
     $$('[data-ec="dataset-date"]').forEach((el) => { el.textContent = dd.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); });
     $('#ec-disclaimer').textContent = DATA0.disclaimer;
-    renderFamily();
+    renderBasic();
     renderChildren();
-    syncInputs(document);
+    renderCoverage();
     const form = $('#ec-form');
     form.addEventListener('input', onInput);
     form.addEventListener('change', onInput);
     document.addEventListener('click', onClick);
+    dialog.addEventListener('cancel', () => { dialogReturn = $('[data-action="reset"]'); });
     $('#ec-load').addEventListener('change', onLoadFile);
     window.addEventListener('beforeprint', buildPrint);
     goTo(1);
