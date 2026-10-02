@@ -120,6 +120,7 @@
   let state = freshState();
   let step = 1;
   let lastFamily = null;
+  let blank = false; // true after "Start again" until the parent changes something: results show 0
 
   const isNum = (v) => typeof v === 'number' && isFinite(v);
   const activeKids = () => state.children.slice(0, state.family.numChildren);
@@ -460,13 +461,13 @@
     const ok = fam.children.some((k) => k.ok);
     root.append(
       h('p', { class: 'ec-rail-label' }, 'Total education fund required'),
-      h('p', { class: 'ec-rail-figure' }, ok ? money(fam.totals.totalCost, ccy) : '—'),
+      h('p', { class: 'ec-rail-figure' }, blank ? money(0, ccy) : ok ? money(fam.totals.totalCost, ccy) : '—'),
       h('p', { class: 'ec-rail-label ec-rail-gap' }, 'Required yearly savings (this year)'),
-      h('p', { class: 'ec-rail-figure ec-rail-figure-2' }, ok ? money(fam.totals.firstYearSaving, ccy) : '—')
+      h('p', { class: 'ec-rail-figure ec-rail-figure-2' }, blank ? money(0, ccy) : ok ? money(fam.totals.firstYearSaving, ccy) : '—')
     );
-    const lt = lumpText(fam);
+    const lt = blank ? 'Enter your family and children\'s details to see the figures.' : lumpText(fam);
     if (lt) root.appendChild(h('p', { class: 'ec-rail-lump' }, lt));
-    if (problems(fam).length) root.appendChild(h('p', { class: 'ec-rail-warn' }, 'Some information is missing — see Results.'));
+    if (!blank && problems(fam).length) root.appendChild(h('p', { class: 'ec-rail-warn' }, 'Some information is missing — see Results.'));
     if (step !== 3) root.appendChild(h('button', { type: 'button', class: 'btn btn-primary btn-sm btn-block', 'data-goto': '3' }, 'See full results'));
   }
 
@@ -474,6 +475,14 @@
     const root = clear($('#ec-results'));
     const ccy = reportingCurrency();
     const a = assumptions();
+    if (blank) {
+      root.appendChild(h('div', { class: 'ec-headline' }, [
+        h('div', { class: 'ec-big' }, [h('p', { class: 'ec-big-label' }, 'Total education fund required'), h('p', { class: 'ec-big-figure' }, money(0, ccy))]),
+        h('div', { class: 'ec-big ec-big-dark' }, [h('p', { class: 'ec-big-label' }, 'Required yearly savings'), h('p', { class: 'ec-big-figure' }, money(0, ccy))])
+      ]));
+      root.appendChild(h('p', { class: 'ec-help' }, 'Enter your family and children\'s details in step 1 to see the full results.'));
+      return;
+    }
     const probs = problems(fam);
     if (probs.length) {
       root.appendChild(h('div', { class: 'ec-warn', role: 'note' }, [h('strong', null, 'Please check: '), h('ul', null, probs.map((p) => h('li', null, p)))]));
@@ -696,6 +705,7 @@
   }
 
   function refresh(structural) {
+    blank = false;
     if (structural) {
       updateChildDynamic();
       renderPlans();
@@ -791,6 +801,7 @@
   function doReset() {
     // resets the form only; a plan saved in this browser is kept
     state = freshState();
+    blank = true;
     renderBasic();
     renderChildren();
     renderCoverage();
