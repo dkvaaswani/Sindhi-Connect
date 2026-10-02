@@ -1,0 +1,40 @@
+[
+  {
+    "name": "P1 Pakistan family, two children, defaults",
+    "family": {"numChildren": 2, "eduCountry": "Pakistan"},
+    "children": [
+      {"age": 10, "qualification": "Computer Science", "savings": 500000, "monthly": 10000},
+      {"age": 6, "qualification": "Medicine — MBBS/MD", "savings": 100000, "monthly": 5000}
+    ]
+  },
+  {
+    "name": "P2 Four children, mixed countries, USD reporting, named university, scholarship, annual mode, FX drift",
+    "family": {"numChildren": 4, "eduCountry": "UK", "repCcy": "USD", "entryAge": 18, "ret": 0.07, "esc": 0.03, "cont": 0.1,
+               "fxDrift": 0.02, "mode": "Annual"},
+    "children": [
+      {"age": 4, "qualification": "Computer Science", "university": "University of Manchester", "savings": 20000, "annual": 3000,
+       "schPct": 0.25},
+      {"age": 9, "country": "Germany", "qualification": "Mechanical Engineering", "entryAge": 19, "savings": 5000, "schFixed": 500},
+      {"age": 12, "country": "Australia", "qualification": "Medicine — MBBS/MD", "otherFunding": 30000, "monthly": 400},
+      {"age": 1, "country": "USA", "qualification": "Business Administration", "university": "Arizona State University",
+       "overrides": {"tuition": 40000}}
+    ]
+  },
+  {
+    "name": "P3 Edge cases: already college age, negative return, zero inflation, 5.5-year MBBS, custom qualification",
+    "family": {"numChildren": 3, "eduCountry": "India", "repCcy": "PKR", "ret": -0.02, "tuiInf": 0, "livInf": 0},
+    "children": [
+      {"age": 19, "qualification": "Computer Science", "savings": 200000},
+      {"age": 13, "qualification": "Medicine — MBBS/MD", "monthly": 20000, "entryAge": 17},
+      {"age": 8, "qualification": "Other / Custom Qualification", "duration": 3,
+       "overrides": {"tuition": 150000, "accommodation": 60000, "oneTimeAdmission": 10000}}
+    ]
+  },
+  {
+    "name": "P4 Savings already cover costs; UK home student; entry age 21",
+    "family": {"numChildren": 1, "eduCountry": "UK", "repCcy": "GBP", "entryAge": 21},
+    "children": [
+      {"age": 15, "category": "UK (Home)", "qualification": "Accounting and Finance", "savings": 200000}
+    ]
+  }
+]

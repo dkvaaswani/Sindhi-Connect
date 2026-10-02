@@ -27,6 +27,12 @@ sindhi-connect/
 
 Push to GitHub and the live site updates automatically.
 
+## Education Fund Calculator
+
+`frontend/education-calculator.html` estimates future university costs for up to four children and the monthly saving
+needed. Its fee data lives in `data/education/education-costs.json`; after editing it run `python3 tools/edu-calc/build.py`
+to regenerate the page data, the Excel workbook and the source register. Full details: `docs/education-calculator/`.
+
 ## Hosting
 
 The site is hosted on Netlify, connected to this GitHub repository. `netlify.toml` tells Netlify to publish the `frontend/` folder with no build step.
