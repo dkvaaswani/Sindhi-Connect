@@ -172,7 +172,8 @@
     error: 'Sorry, something went wrong. Please try again in a moment.'
   };
 
-  document.querySelectorAll('form[data-netlify]').forEach((form) => {
+  // Select by name: Netlify strips data-netlify from the published HTML once it detects the forms
+  document.querySelectorAll('form[name="join"], form[name="contact"]').forEach((form) => {
     const status = form.querySelector('.form-status');
     const button = form.querySelector('[type="submit"]');
 
