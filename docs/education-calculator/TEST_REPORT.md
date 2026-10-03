@@ -24,6 +24,27 @@ run in the browser against the shipped `calc-engine.js` and `education-data.js` 
 Example (2 children, nationality Pakistan, residence Qatar, GBP): Child 1 Computer Science in the UK from 2034/35,
 Child 2 Medicine in Pakistan from 2038/39 — total GBP 395,300, required yearly saving GBP 25,627 in 2026–27.
 
+## Yearly fund roll-forward — added 3 October 2026
+
+`tests/edu-calc/engine.test.js` (11 tests; run in the browser against the shipped engine and data with a small
+shim, because Node is not installed — all 11 pass). New tests:
+
+| Test | Checks | Result |
+|---|---|---|
+| Worked example: 1 child, Computer Science in Pakistan, 4 years from 2026/27, all rates 0% | each year's cost recomputed from the cost rules; amount needed now = year-1 cost; yearly saving recomputed from the funding rule; savings in years 1–3 only; opening(1) = amount needed now; nothing left at the end; Σ expenses = total | pass |
+| Roll-forward for 1–4 children × PKR, GBP, USD, EUR, AUD, INR × return 0/4/8% × scholarship 0/25/100% × savings increase 0/5% | `opening − expenses + growth + savings = closing` for every child and family year; closing → next opening; never short; reconciliation `needed now + savings + growth − expenses = left at end` | pass (108 scenarios) |
+| Positive return | saving keeps the fund from running out, and 0.1% less does not | pass |
+| Inflation | year-on-year growth of tuition and living lines equals the configured rates | pass |
+
+A deliberately broken roll-forward (year 2 opening set to 0) makes the worked example and the roll-forward test fail,
+so the tests catch the problem they are meant to.
+
+Page (scripted in the browser): the worked example shows PKR 6,155,281 total, PKR 1,493,250 yearly saving and
+PKR 1,675,531 needed now on screen, in the printed report and in the CSV; the printed year rows equal the on-screen
+rows. A 3-child GBP plan with 6% return, 25% scholarship and 3% savings increase: 24 printed rows, every row adds up
+and chains, Σ expenses = total on screen = total in print. After "Start again" the dashboard, printed report and CSV
+show no figures until details are entered; entering a detail brings them back. No horizontal page scroll at 375 px.
+
 ## Page — manual and scripted in the browser
 
 | Check | Result |

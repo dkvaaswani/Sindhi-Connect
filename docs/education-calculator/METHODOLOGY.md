@@ -106,7 +106,17 @@ immediately the "amount needed now" is shown instead, in plain language.
   (incl. admission), and visa/application/travel/relocation; the parts add up to the total.
 - **Chart** — one bar series per child (that child's costs in each year) and one line for the family's required saving
   that year (not a cumulative balance).
-- **Year-by-year plan** — year, children studying, expenses, suggested saving, remaining fund after that year's saving.
+- **Year-by-year plan** — a fund roll-forward per year (same columns on screen, in the printed report and in the CSV):
+  opening fund, family savings added, investment growth, education expenses, closing fund, where
+  `closing = opening − expenses + growth + savings` and `growth = (opening − expenses) × r` (costs at the start of the
+  year, savings at the end). Each year's closing fund is the next year's opening fund. The plan assumes **no existing
+  savings**: the first opening fund is the amount needed now `L` (zero when saving can start in time). A child whose
+  course has ended carries any amount left, unchanged. Reconciliation shown under the table:
+  `L + Σ savings + Σ growth − Σ expenses = fund left at the end`, and `Σ expenses = Total Education Fund Required`.
+  Worked example (1 child, Computer Science in Pakistan, 4 years from 2026/27, all rates 0%): the course starts now,
+  so year 1's cost (which includes one-time admission and relocation costs) is the amount needed now; the end-of-year
+  savings in years 1–3 each pay the following year's (equal) cost, so the yearly saving equals one regular year's cost
+  and nothing is left at the end.
 - **Compare countries** — the same child and qualification in each chosen country, using that country's own fees,
   living costs, course length, visa, travel and default price rises; the parent's own cost edits are not carried over.
 

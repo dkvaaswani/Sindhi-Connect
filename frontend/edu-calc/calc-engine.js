@@ -392,11 +392,15 @@
     });
     if (x < 1e-9) x = 0;
 
+    // Roll-forward: opening - expenses (start of year) + growth on the rest + saving (end of year) = closing.
+    // The plan assumes no existing savings; the amount needed now is paid in at the start of year 1.
     let bal = lump;
     rows.forEach((row) => {
+      row.paidInNow = row.p === 1 ? lump : 0;
       row.opening = bal;
       row.saving = row.contribUnit * x;
-      row.closing = (bal - row.expense) * (1 + r) + row.saving;
+      row.growthAmount = (bal - row.expense) * r;
+      row.closing = bal - row.expense + row.growthAmount + row.saving;
       bal = row.closing;
     });
 
@@ -427,11 +431,18 @@
     const H = ok.reduce((m, x) => Math.max(m, x.k.rows.length), 0);
     const years = [];
     for (let i = 0; i < H; i++) {
-      const y = { p: i + 1, year: data.planStartYear + i, expense: 0, saving: 0, fund: 0, studying: [], byChild: {} };
+      const y = { p: i + 1, year: data.planStartYear + i, opening: 0, paidInNow: 0, expense: 0, growth: 0, saving: 0, fund: 0,
+        studying: [], byChild: {} };
       ok.forEach(({ k, i: idx }) => {
         const row = k.rows[i];
-        if (!row) { y.fund += k.rows[k.rows.length - 1].closing; y.byChild[idx] = 0; return; }
+        if (!row) {               // this child's course has ended: whatever is left is carried, unchanged
+          const left = k.rows[k.rows.length - 1].closing;
+          y.opening += left; y.fund += left; y.byChild[idx] = 0; return;
+        }
+        y.opening += row.opening;
+        y.paidInNow += row.paidInNow;
         y.expense += row.expense;
+        y.growth += row.growthAmount;
         y.saving += row.saving;
         y.fund += row.closing;
         y.byChild[idx] = row.expense;
@@ -447,6 +458,9 @@
       totals: {
         totalCost: sum('totalCost'), grossCost: sum('grossCost'), coveredTotal: sum('coveredTotal'),
         firstYearSaving: years.length ? years[0].saving : 0, lumpNow: sum('lumpNow'), byGroup,
+        // reconciliation: lumpNow + totalSaved + totalGrowth - totalCost = finalFund
+        totalSaved: years.reduce((s, y) => s + y.saving, 0), totalGrowth: years.reduce((s, y) => s + y.growth, 0),
+        finalFund: years.length ? years[years.length - 1].fund : 0,
         allOk: ok.length === kids.length && kids.length > 0
       }
     };
