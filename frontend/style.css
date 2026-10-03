@@ -946,8 +946,9 @@ main [data-page]:focus { outline: none; }
 /* ---------- 7. Forms ---------- */
 .forms {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--s-5);
+  max-width: 640px;
 }
 .panel {
   padding: var(--s-6);
