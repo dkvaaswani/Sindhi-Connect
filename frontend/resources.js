@@ -178,6 +178,28 @@ window.SC_KNOWLEDGE = {
       featured: false
     },
     {
+      title: 'Sami',
+      description: 'Chainrai Bachomal "Sami" (1743–1850), the Sindhi poet who carried Vedic wisdom into his Sindhi shlokas.',
+      category: 'personalities',
+      author: 'Wikipedia',
+      year: '',
+      type: 'Article',
+      thumbnail: '',
+      file: 'https://en.wikipedia.org/wiki/Sami_(poet)',
+      featured: false
+    },
+    {
+      title: 'Bhagat Kanwar Ram',
+      description: 'The beloved Sindhi Sufi singer and poet, a disciple of Saint Satram Das Sahib of Raharki.',
+      category: 'personalities',
+      author: 'Wikipedia',
+      year: '',
+      type: 'Article',
+      thumbnail: '',
+      file: 'https://en.wikipedia.org/wiki/Bhagat_Kanwar_Ram',
+      featured: false
+    },
+    {
       title: 'Sindhi Language',
       description: 'Where Sindhi comes from, where it is spoken today, and the scripts used to write it.',
       category: 'literature',
