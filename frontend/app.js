@@ -167,13 +167,12 @@
   'use strict';
 
   const MESSAGES = {
-    join: 'Thank you for joining! We will keep you updated.',
     contact: 'Thank you for your message. We will get back to you soon.',
     error: 'Sorry, something went wrong. Please try again in a moment.'
   };
 
   // Select by name: Netlify strips data-netlify from the published HTML once it detects the forms
-  document.querySelectorAll('form[name="join"], form[name="contact"]').forEach((form) => {
+  document.querySelectorAll('form[name="contact"]').forEach((form) => {
     const status = form.querySelector('.form-status');
     const button = form.querySelector('[type="submit"]');
 
