@@ -79,6 +79,50 @@ window.SC_KNOWLEDGE = {
 
   resources: [
     {
+      title: 'One Simple Habit That Can Save Your Family from Financial Stress',
+      description: 'A practical money habit that helps families stay prepared and avoid financial stress.',
+      category: 'finance',
+      author: 'Sindhi Connect',
+      year: '',
+      type: 'Video',
+      thumbnail: 'https://i.ytimg.com/vi/R50sSMh83lA/hqdefault.jpg',
+      file: 'https://www.youtube.com/watch?v=R50sSMh83lA',
+      featured: true
+    },
+    {
+      title: 'How to Build a Successful Career in Banking & Advisory | Sumiar & Shilpa | Dhanesh Kumar',
+      description: 'Dhanesh Kumar talks with Sumiar and Shilpa about building a career in banking and advisory.',
+      category: 'business',
+      author: 'Sindhi Connect',
+      year: '',
+      type: 'Podcast',
+      thumbnail: 'https://i.ytimg.com/vi/8zQUXtqT5gs/hqdefault.jpg',
+      file: 'https://www.youtube.com/watch?v=8zQUXtqT5gs',
+      featured: true
+    },
+    {
+      title: 'Why Doesn\'t the Government Print Unlimited Money and Make Everyone Rich?',
+      description: 'A simple explanation of why printing more money does not make everyone richer.',
+      category: 'finance',
+      author: 'Sindhi Connect',
+      year: '',
+      type: 'Video',
+      thumbnail: 'https://i.ytimg.com/vi/VlvQkEMaZro/hqdefault.jpg',
+      file: 'https://www.youtube.com/watch?v=VlvQkEMaZro',
+      featured: true
+    },
+    {
+      title: 'CA vs ACCA: Which Career Path Is Right for You?',
+      description: 'Comparing the CA and ACCA qualifications to help students choose the right accounting career path.',
+      category: 'business',
+      author: 'Sindhi Connect',
+      year: '',
+      type: 'Podcast',
+      thumbnail: 'https://i.ytimg.com/vi/trwwkjCF3MM/hqdefault.jpg',
+      file: 'https://www.youtube.com/watch?v=trwwkjCF3MM',
+      featured: true
+    },
+    {
       title: 'Mohenjo-daro',
       description: 'The great Bronze Age city of the Indus Valley Civilisation in Sindh, one of the world\'s earliest planned cities.',
       category: 'history',
@@ -131,6 +175,28 @@ window.SC_KNOWLEDGE = {
       type: 'Article',
       thumbnail: '',
       file: 'https://en.wikipedia.org/wiki/Sachal_Sarmast',
+      featured: false
+    },
+    {
+      title: 'Sami',
+      description: 'Chainrai Bachomal "Sami" (1743–1850), the Sindhi poet who carried Vedic wisdom into his Sindhi shlokas.',
+      category: 'personalities',
+      author: 'Wikipedia',
+      year: '',
+      type: 'Article',
+      thumbnail: '',
+      file: 'https://en.wikipedia.org/wiki/Sami_(poet)',
+      featured: false
+    },
+    {
+      title: 'Bhagat Kanwar Ram',
+      description: 'The beloved Sindhi Sufi singer and poet, a disciple of Saint Satram Das Sahib of Raharki.',
+      category: 'personalities',
+      author: 'Wikipedia',
+      year: '',
+      type: 'Article',
+      thumbnail: '',
+      file: 'https://en.wikipedia.org/wiki/Bhagat_Kanwar_Ram',
       featured: false
     },
     {
