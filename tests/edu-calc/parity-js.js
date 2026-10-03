@@ -1,42 +1,74 @@
-/* Prints JS-engine results for tests/edu-calc/parity-scenarios.json (used by excel_parity.py). */
+/* Web side of the Excel-vs-web parity check (method v2).
+   1. powershell -ExecutionPolicy Bypass -File tests/edu-calc/excel-parity.ps1   (writes excel-results.json)
+   2. node tests/edu-calc/parity-js.js                                            (compares with the web engine)
+   compare(E, D, scenarios, results) is also used to run the check in a browser. */
 'use strict';
-const fs = require('node:fs');
-const path = require('node:path');
-const E = require('../../frontend/edu-calc/calc-engine.js');
 
-const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../../data/education/education-costs.json'), 'utf8'));
-const scenarios = JSON.parse(fs.readFileSync(path.join(__dirname, 'parity-scenarios.json'), 'utf8'));
-const pick = (v, d) => (v === null || v === undefined || v === '' ? d : v);
-
-// Mirrors the "value used" logic of the Parent Inputs sheet.
-function toEngine(s) {
-  const f = s.family;
-  const eduCountry = pick(f.eduCountry, 'Pakistan');
-  const d = E.familyDefaults(data, eduCountry, pick(f.repCcy, null));
-  const a = {
-    returnRate: pick(f.ret, d.returnRate), tuitionInflation: pick(f.tuiInf, d.tuitionInflation),
-    livingInflation: pick(f.livInf, d.livingInflation), contributionEscalation: pick(f.esc, d.contributionEscalation),
-    contingency: pick(f.cont, d.contingency), fxDrift: pick(f.fxDrift, d.fxDrift),
-    contributionMode: pick(f.mode, 'Monthly') === 'Annual' ? 'annual' : 'monthly'
-  };
-  const children = s.children.map((c) => {
-    const country = pick(c.country, eduCountry);
-    const info = E.countryInfo(data, country);
-    const category = pick(c.category, info ? info.defaultCategory : '');
-    const benchmark = !c.university || c.university === 'University average' ? 'average'
-      : E.recordIdFor(data, country, c.qualification, category, c.university);
-    const child = { country, studentCategory: category, qualification: c.qualification, benchmark,
-      age: c.age, entryAge: pick(c.entryAge, pick(f.entryAge, 18)), savings: c.savings || 0, monthly: c.monthly || 0,
-      annual: c.annual || 0, scholarshipPct: c.schPct || 0, scholarshipFixed: c.schFixed || 0, otherFunding: c.otherFunding || 0,
-      overrides: c.overrides || {} };
-    child.duration = pick(c.duration, E.childDuration(data, child));
-    return child;
+function compare(E, D, scenarios, results) {
+  const problems = [];
+  const near = (a, b) => Math.abs((a || 0) - (b || 0)) <= Math.max(1, Math.abs(b || 0) * 1e-6);
+  const check = (label, xl, web) => { if (!near(xl, web)) problems.push(label + ': Excel ' + xl + ' vs web ' + web); };
+  scenarios.forEach((s, si) => {
+    const x = results[si];
+    const f = s.family;
+    const firstCountry = (s.children[0] || {}).country;
+    const ccy = f.repCcy === 'Automatic' ? ((D.countries.find((c) => c.name === firstCountry) || {}).currency || 'USD') : f.repCcy;
+    const rates = Object.assign({}, D.exchangeRates.rates, s.fx || {});
+    const family = { nationality: f.nationality, residence: f.residence, rates };
+    const ret = f.ret === null || f.ret === undefined ? E.defaultReturn(D, ccy) : f.ret;
+    const a = { reportingCurrency: ccy, returnRate: ret, savingsIncrease: f.savInc, coverage: f.coverage };
+    const kids = s.children.map((c) => ({ age: c.age, entryAge: c.entryAge, country: c.country || '', qualification: c.qualification || '',
+      overrides: c.overrides || {}, tuitionInflation: c.tInf === undefined ? null : c.tInf, livingInflation: c.lInf === undefined ? null : c.lInf }));
+    const fam = E.projectFamily(D, { numChildren: f.numChildren, family, assumptions: a, children: kids });
+    const L = s.name;
+    if (x.currency !== ccy) problems.push(L + ': currency Excel ' + x.currency + ' vs web ' + ccy);
+    check(L + ' total', x.total, fam.totals.totalCost);
+    check(L + ' yearly saving', x.saving, fam.totals.firstYearSaving);
+    check(L + ' needed now', x.lump, fam.totals.lumpNow);
+    if (x.planYears !== fam.years.length) problems.push(L + ': plan years Excel ' + x.planYears + ' vs web ' + fam.years.length);
+    fam.children.forEach((k, i) => {
+      check(L + ' child ' + (i + 1) + ' total', x.children[i].total, k.ok ? k.summary.totalCost : 0);
+      if (!k.ok && !x.children[i].message && s.children[i] && s.children[i].country) problems.push(L + ': child ' + (i + 1) + ' should show a message');
+    });
+    fam.years.forEach((y, p) => {
+      const xy = x.years[p] || {};
+      check(L + ' ' + y.year + ' opening', xy.opening, y.opening);
+      check(L + ' ' + y.year + ' savings', xy.saving, y.saving);
+      check(L + ' ' + y.year + ' growth', xy.growth, y.growth);
+      check(L + ' ' + y.year + ' expenses', xy.expense, y.expense);
+      check(L + ' ' + y.year + ' closing', xy.closing, y.fund);
+    });
+    // compare countries for the selected child
+    const ci = (s.cmpChild || 1) - 1;
+    const k = fam.children[ci];
+    if (k && k.ok) {
+      const list = E.compareCountries(D, kids[ci], family, a, D.countries.map((c) => c.name));
+      list.forEach((r, j) => {
+        const xr = x.compare[j];
+        if (!r.available) { if (xr.total !== 'Not available') problems.push(L + ' compare ' + r.country + ': Excel ' + xr.total + ' vs web Not available'); return; }
+        check(L + ' compare ' + r.country, xr.total, r.totalCost);
+      });
+    }
   });
-  return { numChildren: f.numChildren, reportingCurrency: d.reportingCurrency, assumptions: a, children };
+  return problems;
 }
 
-const out = scenarios.map((s) => {
-  const fam = E.projectFamily(data, toEngine(s));
-  return { name: s.name, children: fam.children.map((k) => (k.ok ? k.summary : { invalid: true })), totals: fam.totals };
-});
-process.stdout.write(JSON.stringify(out));
+if (typeof module === 'object' && module.exports && require.main === module) {
+  const fs = require('fs');
+  const path = require('path');
+  const vm = require('vm');
+  const root = path.join(__dirname, '..', '..');
+  const E = require(path.join(root, 'frontend', 'edu-calc', 'calc-engine.js'));
+  const ctx = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'frontend', 'edu-calc', 'education-data.js'), 'utf8'), ctx);
+  const scenarios = JSON.parse(fs.readFileSync(path.join(__dirname, 'parity-scenarios.json'), 'utf8')).scenarios;
+  const results = JSON.parse(fs.readFileSync(path.join(__dirname, 'excel-results.json'), 'utf8'));
+  const problems = compare(E, ctx.window.EDU_DATA, scenarios, results);
+  problems.forEach((p) => console.log('MISMATCH ' + p));
+  console.log(problems.length ? problems.length + ' mismatches' : 'Excel matches the web engine in all ' + scenarios.length + ' scenarios.');
+  process.exitCode = problems.length ? 1 : 0;
+} else if (typeof module === 'object' && module.exports) {
+  module.exports = { compare };
+} else {
+  window.parityCompare = compare;
+}

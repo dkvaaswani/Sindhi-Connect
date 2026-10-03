@@ -137,7 +137,6 @@ immediately the "amount needed now" is shown instead, in plain language.
 
 ## 10. Excel status
 
-The Excel workbook (`frontend/downloads/Children_Education_Fund_Calculator.xlsx`) still follows the **previous**
-(v1) method and inputs and has been removed from the page until it is rebuilt with this method. Rebuilding it needs
-Python 3 + openpyxl (`tools/edu-calc/build.py`, to be updated for dataset v2) and, for the automatic Excel-vs-web check,
-LibreOffice and Node.js.
+The Excel workbook (`frontend/downloads/Children_Education_Fund_Calculator.xlsx`, built by `tools/edu-calc/build.py`)
+implements this method with formulas only and is linked from the calculator page. It starts blank in USD. Its results
+match the web engine in all parity scenarios (TEST_REPORT.md); see MAINTENANCE.md for rebuilding.

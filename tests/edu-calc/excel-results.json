@@ -1,0 +1,2105 @@
+[
+    {
+        "name":  "worked example: Computer Science in Pakistan, all rates 0%, PKR",
+        "currency":  "PKR",
+        "total":  6155280.66,
+        "saving":  1493250.0000000002,
+        "lump":  1675530.66,
+        "planYears":  4,
+        "children":  [
+                         {
+                             "total":  6155280.66,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  1675530.66,
+                          "saving":  1493250,
+                          "growth":  0,
+                          "expense":  1675530.66,
+                          "closing":  1493250,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1493250,
+                          "saving":  1493250,
+                          "growth":  0,
+                          "expense":  1493250,
+                          "closing":  1493250,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1493250,
+                          "saving":  1493250,
+                          "growth":  0,
+                          "expense":  1493250,
+                          "closing":  1493250,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1493250,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  1493250,
+                          "closing":  0,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  6155280.66,
+                            "note":  "",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "India",
+                            "total":  12344403.376895772,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  71291283.770199984,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  51871756.237301379,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  51713337.397011295,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  11862048.312757434,
+                            "note":  "",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: PKR 1,675,531 needed now + PKR 4,479,750 family savings + PKR 0 investment growth - PKR 6,155,281 education expenses = PKR 0 left at the end."
+    },
+    {
+        "name":  "UK Law, Pakistani living in Qatar, GBP, default return",
+        "currency":  "GBP",
+        "total":  167659.35724855986,
+        "saving":  13997.73508565663,
+        "lump":  0,
+        "planYears":  11,
+        "children":  [
+                         {
+                             "total":  167659.35724855986,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  13997.74,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  13997.74,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  13997.74,
+                          "saving":  13997.74,
+                          "growth":  699.89,
+                          "expense":  0,
+                          "closing":  28695.36,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  28695.36,
+                          "saving":  13997.74,
+                          "growth":  1434.77,
+                          "expense":  0,
+                          "closing":  44127.86,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  44127.86,
+                          "saving":  13997.74,
+                          "growth":  2206.39,
+                          "expense":  0,
+                          "closing":  60331.99,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  60331.99,
+                          "saving":  13997.74,
+                          "growth":  3016.6,
+                          "expense":  0,
+                          "closing":  77346.32,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  77346.32,
+                          "saving":  13997.74,
+                          "growth":  3867.32,
+                          "expense":  0,
+                          "closing":  95211.37,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  95211.37,
+                          "saving":  13997.74,
+                          "growth":  4760.57,
+                          "expense":  0,
+                          "closing":  113969.68,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  113969.68,
+                          "saving":  13997.74,
+                          "growth":  5698.48,
+                          "expense":  0,
+                          "closing":  133665.9,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  133665.9,
+                          "saving":  13997.74,
+                          "growth":  3933.39,
+                          "expense":  54998.03,
+                          "closing":  96599,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  96599,
+                          "saving":  13997.74,
+                          "growth":  2064.6,
+                          "expense":  55307.05,
+                          "closing":  57354.28,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  57354.28,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  57354.28,
+                          "closing":  0,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  40495.780381813362,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  65029.145824005493,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  670735.72577009012,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  167659.35724855986,
+                            "note":  "",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  259136.71941392781,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  80970.693202540278,
+                            "note":  "",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: GBP 0 needed now + GBP 139,977 family savings + GBP 27,682 investment growth - GBP 167,659 education expenses = GBP 0 left at the end."
+    },
+    {
+        "name":  "USA Medicine (pre-medical stage), USD, 6% return, 3% savings increase",
+        "currency":  "USD",
+        "total":  1035113.3455668695,
+        "saving":  39294.397341110016,
+        "lump":  0,
+        "planYears":  17,
+        "children":  [
+                         {
+                             "total":  1035113.3455668695,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  39294.4,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  39294.4,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  39294.4,
+                          "saving":  40473.23,
+                          "growth":  2357.66,
+                          "expense":  0,
+                          "closing":  82125.29,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  82125.29,
+                          "saving":  41687.43,
+                          "growth":  4927.52,
+                          "expense":  0,
+                          "closing":  128740.23,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  128740.23,
+                          "saving":  42938.05,
+                          "growth":  7724.41,
+                          "expense":  0,
+                          "closing":  179402.7,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  179402.7,
+                          "saving":  44226.19,
+                          "growth":  10764.16,
+                          "expense":  0,
+                          "closing":  234393.05,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  234393.05,
+                          "saving":  45552.98,
+                          "growth":  14063.58,
+                          "expense":  0,
+                          "closing":  294009.61,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  294009.61,
+                          "saving":  46919.57,
+                          "growth":  17640.58,
+                          "expense":  0,
+                          "closing":  358569.75,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  358569.75,
+                          "saving":  48327.15,
+                          "growth":  21514.19,
+                          "expense":  0,
+                          "closing":  428411.09,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  428411.09,
+                          "saving":  49776.97,
+                          "growth":  25704.67,
+                          "expense":  0,
+                          "closing":  503892.72,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  503892.72,
+                          "saving":  51270.28,
+                          "growth":  25325.66,
+                          "expense":  81798.38,
+                          "closing":  498690.27,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  498690.27,
+                          "saving":  52808.38,
+                          "growth":  25023.11,
+                          "expense":  81638.42,
+                          "closing":  494883.35,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  494883.35,
+                          "saving":  54392.64,
+                          "growth":  24619.23,
+                          "expense":  84562.79,
+                          "closing":  489332.42,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  489332.42,
+                          "saving":  56024.41,
+                          "growth":  24104.31,
+                          "expense":  87593.9,
+                          "closing":  481867.24,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  481867.24,
+                          "saving":  57705.15,
+                          "growth":  18995.14,
+                          "expense":  165281.61,
+                          "closing":  393285.91,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  393285.91,
+                          "saving":  59436.3,
+                          "growth":  13305.95,
+                          "expense":  171520.08,
+                          "closing":  294508.09,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  294508.09,
+                          "saving":  61219.39,
+                          "growth":  6990.67,
+                          "expense":  177996.89,
+                          "closing":  184721.26,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  184721.26,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  184721.26,
+                          "closing":  0,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  175158.46492158563,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  293584.76669471792,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  1035113.3455668695,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  630885.04613625631,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  863005.80931461125,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  133728.4344969762,
+                            "note":  "",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: USD 0 needed now + USD 792,053 family savings + USD 243,061 investment growth - USD 1,035,113 education expenses = USD 0 left at the end."
+    },
+    {
+        "name":  "India MBBS 4.5 years, Indian at home, INR",
+        "currency":  "INR",
+        "total":  12434411.687247023,
+        "saving":  963151.12482077873,
+        "lump":  0,
+        "planYears":  11,
+        "children":  [
+                         {
+                             "total":  12434411.687247023,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  963151.12,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  963151.12,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  963151.12,
+                          "saving":  963151.12,
+                          "growth":  96315.11,
+                          "expense":  0,
+                          "closing":  2022617.36,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  2022617.36,
+                          "saving":  963151.12,
+                          "growth":  202261.74,
+                          "expense":  0,
+                          "closing":  3188030.22,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  3188030.22,
+                          "saving":  963151.12,
+                          "growth":  318803.02,
+                          "expense":  0,
+                          "closing":  4469984.37,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  4469984.37,
+                          "saving":  963151.12,
+                          "growth":  446998.44,
+                          "expense":  0,
+                          "closing":  5880133.93,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  5880133.93,
+                          "saving":  963151.12,
+                          "growth":  588013.39,
+                          "expense":  0,
+                          "closing":  7431298.45,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  7431298.45,
+                          "saving":  963151.12,
+                          "growth":  491452.04,
+                          "expense":  2516778,
+                          "closing":  6369123.62,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  6369123.62,
+                          "saving":  963151.12,
+                          "growth":  374479.17,
+                          "expense":  2624331.9,
+                          "closing":  5082422.01,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  5082422.01,
+                          "saving":  963151.12,
+                          "growth":  230063.02,
+                          "expense":  2781791.82,
+                          "closing":  3493844.34,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  3493844.34,
+                          "saving":  963151.12,
+                          "growth":  54514.5,
+                          "expense":  2948699.33,
+                          "closing":  1562810.64,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1562810.64,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  1562810.64,
+                          "closing":  0,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  18871062.224719532,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  12434411.687247023,
+                            "note":  "",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  89403556.455479667,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  54347111.499603122,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  72616222.160658062,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  11881359.228459187,
+                            "note":  "",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: INR 0 needed now + INR 9,631,511 family savings + INR 2,802,900 investment growth - INR 12,434,412 education expenses = INR 0 left at the end."
+    },
+    {
+        "name":  "4 children, mixed countries, USD, 6% return, 25% scholarship, 3% increase",
+        "currency":  "USD",
+        "total":  710918.15963173029,
+        "saving":  48203.933803079533,
+        "lump":  0,
+        "planYears":  22,
+        "children":  [
+                         {
+                             "total":  162862.09052003548,
+                             "message":  ""
+                         },
+                         {
+                             "total":  41718.810951866486,
+                             "message":  ""
+                         },
+                         {
+                             "total":  229740.91719200092,
+                             "message":  ""
+                         },
+                         {
+                             "total":  276596.34096782742,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  48203.93,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  48203.93,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  48203.93,
+                          "saving":  49650.05,
+                          "growth":  2892.24,
+                          "expense":  0,
+                          "closing":  100746.22,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  100746.22,
+                          "saving":  51139.55,
+                          "growth":  6044.77,
+                          "expense":  0,
+                          "closing":  157930.55,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  157930.55,
+                          "saving":  52673.74,
+                          "growth":  6259.91,
+                          "expense":  53598.66,
+                          "closing":  163265.55,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  163265.55,
+                          "saving":  54253.95,
+                          "growth":  6578.15,
+                          "expense":  53629.78,
+                          "closing":  170467.87,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  170467.87,
+                          "saving":  22317.39,
+                          "growth":  6890.05,
+                          "expense":  55633.66,
+                          "closing":  144041.65,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  144041.65,
+                          "saving":  22986.91,
+                          "growth":  8642.5,
+                          "expense":  0,
+                          "closing":  175671.05,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  175671.05,
+                          "saving":  23676.51,
+                          "growth":  9675.23,
+                          "expense":  14417.22,
+                          "closing":  194605.58,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  194605.58,
+                          "saving":  24386.81,
+                          "growth":  10868.86,
+                          "expense":  13457.94,
+                          "closing":  216403.3,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  216403.3,
+                          "saving":  20610.12,
+                          "growth":  12153.58,
+                          "expense":  13843.65,
+                          "closing":  235323.35,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  235323.35,
+                          "saving":  21228.42,
+                          "growth":  14119.4,
+                          "expense":  0,
+                          "closing":  270671.18,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  270671.18,
+                          "saving":  21865.28,
+                          "growth":  16240.27,
+                          "expense":  0,
+                          "closing":  308776.72,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  308776.72,
+                          "saving":  22521.23,
+                          "growth":  13947.24,
+                          "expense":  76322.65,
+                          "closing":  268922.55,
+                          "studying":  "Child 3"
+                      },
+                      {
+                          "opening":  268922.55,
+                          "saving":  23196.87,
+                          "growth":  11632.95,
+                          "expense":  75039.98,
+                          "closing":  228712.4,
+                          "studying":  "Child 3"
+                      },
+                      {
+                          "opening":  228712.4,
+                          "saving":  9116.24,
+                          "growth":  9020.05,
+                          "expense":  78378.29,
+                          "closing":  168470.4,
+                          "studying":  "Child 3"
+                      },
+                      {
+                          "opening":  168470.4,
+                          "saving":  9389.73,
+                          "growth":  10108.22,
+                          "expense":  0,
+                          "closing":  187968.36,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  187968.36,
+                          "saving":  9671.42,
+                          "growth":  11278.1,
+                          "expense":  0,
+                          "closing":  208917.88,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  208917.88,
+                          "saving":  9961.57,
+                          "growth":  9547.26,
+                          "expense":  49796.83,
+                          "closing":  178629.88,
+                          "studying":  "Child 4"
+                      },
+                      {
+                          "opening":  178629.88,
+                          "saving":  10260.41,
+                          "growth":  7774.72,
+                          "expense":  49051.19,
+                          "closing":  147613.83,
+                          "studying":  "Child 4"
+                      },
+                      {
+                          "opening":  147613.83,
+                          "saving":  10568.23,
+                          "growth":  5626.99,
+                          "expense":  53830.71,
+                          "closing":  109978.33,
+                          "studying":  "Child 4"
+                      },
+                      {
+                          "opening":  109978.33,
+                          "saving":  10885.27,
+                          "growth":  3054.01,
+                          "expense":  59078.15,
+                          "closing":  64839.47,
+                          "studying":  "Child 4"
+                      },
+                      {
+                          "opening":  64839.47,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  64839.47,
+                          "closing":  0,
+                          "studying":  "Child 4"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  26262.749490210852,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  44542.416462995163,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  226877.85322523577,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  162862.09052003548,
+                            "note":  "",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  164240.41858020989,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  38691.589442464719,
+                            "note":  "",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: USD 0 needed now + USD 528,564 family savings + USD 182,355 investment growth - USD 710,918 education expenses = USD 0 left at the end."
+    },
+    {
+        "name":  "Automatic currency, German student in Germany",
+        "currency":  "EUR",
+        "total":  50191.775121391984,
+        "saving":  2689.6321919111792,
+        "lump":  0,
+        "planYears":  15,
+        "children":  [
+                         {
+                             "total":  50191.775121391984,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  2689.63,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  2689.63,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  2689.63,
+                          "saving":  2689.63,
+                          "growth":  134.48,
+                          "expense":  0,
+                          "closing":  5513.75,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  5513.75,
+                          "saving":  2689.63,
+                          "growth":  275.69,
+                          "expense":  0,
+                          "closing":  8479.07,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  8479.07,
+                          "saving":  2689.63,
+                          "growth":  423.95,
+                          "expense":  0,
+                          "closing":  11592.65,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  11592.65,
+                          "saving":  2689.63,
+                          "growth":  579.63,
+                          "expense":  0,
+                          "closing":  14861.92,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  14861.92,
+                          "saving":  2689.63,
+                          "growth":  743.1,
+                          "expense":  0,
+                          "closing":  18294.64,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  18294.64,
+                          "saving":  2689.63,
+                          "growth":  914.73,
+                          "expense":  0,
+                          "closing":  21899.01,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  21899.01,
+                          "saving":  2689.63,
+                          "growth":  1094.95,
+                          "expense":  0,
+                          "closing":  25683.59,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  25683.59,
+                          "saving":  2689.63,
+                          "growth":  1284.18,
+                          "expense":  0,
+                          "closing":  29657.4,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  29657.4,
+                          "saving":  2689.63,
+                          "growth":  1482.87,
+                          "expense":  0,
+                          "closing":  33829.9,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  33829.9,
+                          "saving":  2689.63,
+                          "growth":  1691.5,
+                          "expense":  0,
+                          "closing":  38211.03,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  38211.03,
+                          "saving":  2689.63,
+                          "growth":  1910.55,
+                          "expense":  0,
+                          "closing":  42811.22,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  42811.22,
+                          "saving":  2689.63,
+                          "growth":  1315.51,
+                          "expense":  16501.01,
+                          "closing":  30315.35,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  30315.35,
+                          "saving":  2689.63,
+                          "growth":  685.78,
+                          "expense":  16599.67,
+                          "closing":  17091.1,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  17091.1,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  17091.1,
+                          "closing":  0,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  96772.361168141986,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  88988.440745575237,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  367099.75896553625,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  266191.73430277267,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  285036.19283606473,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  50191.775121391984,
+                            "note":  "",
+                            "current":  "Current plan"
+                        }
+                    ],
+        "addsUp":  "Adds up: EUR 0 needed now + EUR 37,655 family savings + EUR 12,537 investment growth - EUR 50,192 education expenses = EUR 0 left at the end."
+    },
+    {
+        "name":  "own cost figures and own increases, UK international",
+        "currency":  "PKR",
+        "total":  45006595.138788581,
+        "saving":  4756431.6109629162,
+        "lump":  0,
+        "planYears":  8,
+        "children":  [
+                         {
+                             "total":  45006595.138788581,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  4756431.61,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  4756431.61,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  4756431.61,
+                          "saving":  4994253.19,
+                          "growth":  380514.53,
+                          "expense":  0,
+                          "closing":  10131199.33,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  10131199.33,
+                          "saving":  5243965.85,
+                          "growth":  810495.95,
+                          "expense":  0,
+                          "closing":  16185661.13,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  16185661.13,
+                          "saving":  5506164.14,
+                          "growth":  1294852.89,
+                          "expense":  0,
+                          "closing":  22986678.16,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  22986678.16,
+                          "saving":  5781472.35,
+                          "growth":  1838934.25,
+                          "expense":  0,
+                          "closing":  30607084.77,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  30607084.77,
+                          "saving":  6070545.97,
+                          "growth":  1274511.38,
+                          "expense":  14675692.5,
+                          "closing":  23276449.61,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  23276449.61,
+                          "saving":  6374073.27,
+                          "growth":  680379.76,
+                          "expense":  14771702.67,
+                          "closing":  15559199.97,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  15559199.97,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  15559199.97,
+                          "closing":  0,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  7687348.4068902908,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  5677840.0607077749,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  89185437.151919216,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  45006595.138788581,
+                            "note":  "",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  59494114.095495746,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  14790275.470219456,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: PKR 0 needed now + PKR 38,726,906 family savings + PKR 6,279,689 investment growth - PKR 45,006,595 education expenses = PKR 0 left at the end."
+    },
+    {
+        "name":  "Australia Nursing, Indian at home, AUD, 100% scholarship",
+        "currency":  "AUD",
+        "total":  5080.8281455424994,
+        "saving":  1161.4340882816912,
+        "lump":  0,
+        "planYears":  7,
+        "children":  [
+                         {
+                             "total":  5080.8281455424994,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  1161.43,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  1161.43,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  1161.43,
+                          "saving":  1161.43,
+                          "growth":  69.69,
+                          "expense":  0,
+                          "closing":  2392.55,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  2392.55,
+                          "saving":  1161.43,
+                          "growth":  143.55,
+                          "expense":  0,
+                          "closing":  3697.54,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  3697.54,
+                          "saving":  1161.43,
+                          "growth":  221.85,
+                          "expense":  0,
+                          "closing":  5080.83,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  5080.83,
+                          "saving":  1161.43,
+                          "growth":  0,
+                          "expense":  5080.83,
+                          "closing":  1161.43,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1161.43,
+                          "saving":  1161.43,
+                          "growth":  69.69,
+                          "expense":  0,
+                          "closing":  2392.55,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  2392.55,
+                          "saving":  0,
+                          "growth":  143.55,
+                          "expense":  0,
+                          "closing":  2536.11,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  1702.9410373440003,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  544.9166178600002,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  3862.0920339241875,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  3138.965967334907,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  5080.8281455424994,
+                            "note":  "",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  1999.4383055890441,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: AUD 0 needed now + AUD 6,969 family savings + AUD 648 investment growth - AUD 5,081 education expenses = AUD 2,536 left at the end."
+    },
+    {
+        "name":  "one course not offered (CPA in the UK) and one valid child",
+        "currency":  "GBP",
+        "total":  152464.29897345242,
+        "saving":  8575.2404763673985,
+        "lump":  0,
+        "planYears":  15,
+        "children":  [
+                         {
+                             "total":  0,
+                             "message":  "This qualification is not offered (or has no typical duration) in the selected country."
+                         },
+                         {
+                             "total":  152464.29897345242,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  8575.24,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  8575.24,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  8575.24,
+                          "saving":  8575.24,
+                          "growth":  428.76,
+                          "expense":  0,
+                          "closing":  17579.24,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  17579.24,
+                          "saving":  8575.24,
+                          "growth":  878.96,
+                          "expense":  0,
+                          "closing":  27033.45,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  27033.45,
+                          "saving":  8575.24,
+                          "growth":  1351.67,
+                          "expense":  0,
+                          "closing":  36960.36,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  36960.36,
+                          "saving":  8575.24,
+                          "growth":  1848.02,
+                          "expense":  0,
+                          "closing":  47383.62,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  47383.62,
+                          "saving":  8575.24,
+                          "growth":  2369.18,
+                          "expense":  0,
+                          "closing":  58328.04,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  58328.04,
+                          "saving":  8575.24,
+                          "growth":  2916.4,
+                          "expense":  0,
+                          "closing":  69819.68,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  69819.68,
+                          "saving":  8575.24,
+                          "growth":  3490.98,
+                          "expense":  0,
+                          "closing":  81885.9,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  81885.9,
+                          "saving":  8575.24,
+                          "growth":  4094.3,
+                          "expense":  0,
+                          "closing":  94555.44,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  94555.44,
+                          "saving":  8575.24,
+                          "growth":  4727.77,
+                          "expense":  0,
+                          "closing":  107858.45,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  107858.45,
+                          "saving":  8575.24,
+                          "growth":  3940.87,
+                          "expense":  29041.03,
+                          "closing":  91333.53,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  91333.53,
+                          "saving":  8575.24,
+                          "growth":  3088.67,
+                          "expense":  29560.13,
+                          "closing":  73437.31,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  73437.31,
+                          "saving":  8575.24,
+                          "growth":  2151.49,
+                          "expense":  30407.56,
+                          "closing":  53756.47,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  53756.47,
+                          "saving":  8575.24,
+                          "growth":  1123.86,
+                          "expense":  31279.36,
+                          "closing":  32176.21,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  32176.21,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  32176.21,
+                          "closing":  0,
+                          "studying":  "Child 2"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: GBP 0 needed now + GBP 120,053 family savings + GBP 32,411 investment growth - GBP 152,464 education expenses = GBP 0 left at the end."
+    },
+    {
+        "name":  "already at college age, 12% return",
+        "currency":  "PKR",
+        "total":  6671928.7201836808,
+        "saving":  1342319.6922928081,
+        "lump":  1237124.66,
+        "planYears":  5,
+        "children":  [
+                         {
+                             "total":  6671928.7201836808,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  1237124.66,
+                          "saving":  1342319.69,
+                          "growth":  0,
+                          "expense":  1237124.66,
+                          "closing":  1342319.69,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1342319.69,
+                          "saving":  1342319.69,
+                          "growth":  18366.37,
+                          "expense":  1189266.64,
+                          "closing":  1513739.11,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1513739.11,
+                          "saving":  1342319.69,
+                          "growth":  26170.43,
+                          "expense":  1295652.17,
+                          "closing":  1586577.06,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1586577.06,
+                          "saving":  1342319.69,
+                          "growth":  20988.49,
+                          "expense":  1411672.96,
+                          "closing":  1538212.28,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1538212.28,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  1538212.28,
+                          "closing":  0,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  6671928.7201836808,
+                            "note":  "",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "India",
+                            "total":  12684827.161834545,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  133892118.31566311,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  71410359.52648516,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  70829644.1715203,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  18923624.983557105,
+                            "note":  "",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: PKR 1,237,125 needed now + PKR 5,369,279 family savings + PKR 65,525 investment growth - PKR 6,671,929 education expenses = PKR 0 left at the end."
+    },
+    {
+        "name":  "late entry age 21, USA Dentistry pre-stage, own exchange rate",
+        "currency":  "INR",
+        "total":  130848127.95333448,
+        "saving":  3612451.7771622143,
+        "lump":  0,
+        "planYears":  24,
+        "children":  [
+                         {
+                             "total":  130848127.95333448,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  3612451.78,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  3612451.78,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  3612451.78,
+                          "saving":  3612451.78,
+                          "growth":  180622.59,
+                          "expense":  0,
+                          "closing":  7405526.14,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  7405526.14,
+                          "saving":  3612451.78,
+                          "growth":  370276.31,
+                          "expense":  0,
+                          "closing":  11388254.23,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  11388254.23,
+                          "saving":  3612451.78,
+                          "growth":  569412.71,
+                          "expense":  0,
+                          "closing":  15570118.72,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  15570118.72,
+                          "saving":  3612451.78,
+                          "growth":  778505.94,
+                          "expense":  0,
+                          "closing":  19961076.43,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  19961076.43,
+                          "saving":  3612451.78,
+                          "growth":  998053.82,
+                          "expense":  0,
+                          "closing":  24571582.03,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  24571582.03,
+                          "saving":  3612451.78,
+                          "growth":  1228579.1,
+                          "expense":  0,
+                          "closing":  29412612.91,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  29412612.91,
+                          "saving":  3612451.78,
+                          "growth":  1470630.65,
+                          "expense":  0,
+                          "closing":  34495695.33,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  34495695.33,
+                          "saving":  3612451.78,
+                          "growth":  1724784.77,
+                          "expense":  0,
+                          "closing":  39832931.87,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  39832931.87,
+                          "saving":  3612451.78,
+                          "growth":  1991646.59,
+                          "expense":  0,
+                          "closing":  45437030.24,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  45437030.24,
+                          "saving":  3612451.78,
+                          "growth":  2271851.51,
+                          "expense":  0,
+                          "closing":  51321333.53,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  51321333.53,
+                          "saving":  3612451.78,
+                          "growth":  2566066.68,
+                          "expense":  0,
+                          "closing":  57499851.99,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  57499851.99,
+                          "saving":  3612451.78,
+                          "growth":  2874992.6,
+                          "expense":  0,
+                          "closing":  63987296.36,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  63987296.36,
+                          "saving":  3612451.78,
+                          "growth":  3199364.82,
+                          "expense":  0,
+                          "closing":  70799112.96,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  70799112.96,
+                          "saving":  3612451.78,
+                          "growth":  3539955.65,
+                          "expense":  0,
+                          "closing":  77951520.38,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  77951520.38,
+                          "saving":  3612451.78,
+                          "growth":  3897576.02,
+                          "expense":  0,
+                          "closing":  85461548.18,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  85461548.18,
+                          "saving":  3612451.78,
+                          "growth":  3802674.31,
+                          "expense":  9408061.96,
+                          "closing":  83468612.31,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  83468612.31,
+                          "saving":  3612451.78,
+                          "growth":  3703204.97,
+                          "expense":  9404512.88,
+                          "closing":  81379756.18,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  81379756.18,
+                          "saving":  3612451.78,
+                          "growth":  3581841.3,
+                          "expense":  9742930.12,
+                          "closing":  78831119.14,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  78831119.14,
+                          "saving":  3612451.78,
+                          "growth":  3436868.4,
+                          "expense":  10093751.15,
+                          "closing":  75786688.16,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  75786688.16,
+                          "saving":  3612451.78,
+                          "growth":  2700685.49,
+                          "expense":  21772978.27,
+                          "closing":  60326847.17,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  60326847.17,
+                          "saving":  3612451.78,
+                          "growth":  1886210.74,
+                          "expense":  22602632.45,
+                          "closing":  43222877.23,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  43222877.23,
+                          "saving":  3612451.78,
+                          "growth":  987932.12,
+                          "expense":  23464234.86,
+                          "closing":  24359026.27,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  24359026.27,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  24359026.27,
+                          "closing":  0,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  31231089.062618472,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  8027212.0660568066,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  130848127.95333448,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  73242573.7812608,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  86424261.856951475,
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  12017279.664198227,
+                            "note":  "",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: INR 0 needed now + INR 83,086,391 family savings + INR 47,761,737 investment growth - INR 130,848,128 education expenses = INR 0 left at the end."
+    },
+    {
+        "name":  "ACCA in Pakistan (fixed estimate in GBP), negative return",
+        "currency":  "PKR",
+        "total":  3452238.8432226265,
+        "saving":  872066.59349039954,
+        "lump":  0,
+        "planYears":  5,
+        "children":  [
+                         {
+                             "total":  3452238.8432226265,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  872066.59,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  872066.59,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  872066.59,
+                          "saving":  872066.59,
+                          "growth":  -17441.33,
+                          "expense":  0,
+                          "closing":  1726691.86,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  1726691.86,
+                          "saving":  872066.59,
+                          "growth":  -11782.05,
+                          "expense":  1137589.26,
+                          "closing":  1449387.14,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1449387.14,
+                          "saving":  872066.59,
+                          "growth":  -6804.15,
+                          "expense":  1109179.79,
+                          "closing":  1205469.79,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  1205469.79,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  1205469.79,
+                          "closing":  0,
+                          "studying":  "Child 1"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  3452238.8432226265,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "India",
+                            "total":  3174656.0615915209,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  24888170.530915394,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  16901218.491892185,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  19139601.40851564,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  12565908.403987948,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: PKR 0 needed now + PKR 3,488,266 family savings + PKR -36,028 investment growth - PKR 3,452,239 education expenses = PKR 0 left at the end."
+    },
+    {
+        "name":  "USA CPA (pre-stage), Australian CA, compare child 2",
+        "currency":  "USD",
+        "total":  622262.17568741657,
+        "saving":  53511.470637914732,
+        "lump":  0,
+        "planYears":  20,
+        "children":  [
+                         {
+                             "total":  176840.22334482137,
+                             "message":  ""
+                         },
+                         {
+                             "total":  445421.95234259521,
+                             "message":  ""
+                         }
+                     ],
+        "years":  [
+                      {
+                          "opening":  0,
+                          "saving":  53511.47,
+                          "growth":  0,
+                          "expense":  0,
+                          "closing":  53511.47,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  53511.47,
+                          "saving":  53511.47,
+                          "growth":  1041.95,
+                          "expense":  36145.58,
+                          "closing":  71919.31,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  71919.31,
+                          "saving":  53511.47,
+                          "growth":  2105.2,
+                          "expense":  36832.64,
+                          "closing":  90703.34,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  90703.34,
+                          "saving":  53511.47,
+                          "growth":  3157.63,
+                          "expense":  38076.09,
+                          "closing":  109296.35,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  109296.35,
+                          "saving":  53511.47,
+                          "growth":  4196.04,
+                          "expense":  39362.39,
+                          "closing":  127641.47,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  127641.47,
+                          "saving":  15986.31,
+                          "growth":  6073.08,
+                          "expense":  26423.52,
+                          "closing":  123277.34,
+                          "studying":  "Child 1"
+                      },
+                      {
+                          "opening":  123277.34,
+                          "saving":  15986.31,
+                          "growth":  6690.58,
+                          "expense":  0,
+                          "closing":  145954.23,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  145954.23,
+                          "saving":  15986.31,
+                          "growth":  8051.19,
+                          "expense":  0,
+                          "closing":  169991.73,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  169991.73,
+                          "saving":  15986.31,
+                          "growth":  9493.44,
+                          "expense":  0,
+                          "closing":  195471.48,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  195471.48,
+                          "saving":  15986.31,
+                          "growth":  11022.22,
+                          "expense":  0,
+                          "closing":  222480.01,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  222480.01,
+                          "saving":  15986.31,
+                          "growth":  12642.74,
+                          "expense":  0,
+                          "closing":  251109.05,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  251109.05,
+                          "saving":  15986.31,
+                          "growth":  14360.48,
+                          "expense":  0,
+                          "closing":  281455.84,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  281455.84,
+                          "saving":  15986.31,
+                          "growth":  16181.29,
+                          "expense":  0,
+                          "closing":  313623.44,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  313623.44,
+                          "saving":  15986.31,
+                          "growth":  18111.34,
+                          "expense":  0,
+                          "closing":  347721.09,
+                          "studying":  ""
+                      },
+                      {
+                          "opening":  347721.09,
+                          "saving":  15986.31,
+                          "growth":  13574.96,
+                          "expense":  109704.09,
+                          "closing":  267578.27,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  267578.27,
+                          "saving":  15986.31,
+                          "growth":  8798.94,
+                          "expense":  109161.47,
+                          "closing":  183202.05,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  183202.05,
+                          "saving":  15986.31,
+                          "growth":  3444,
+                          "expense":  114034.36,
+                          "closing":  88598,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  88598,
+                          "saving":  15986.31,
+                          "growth":  2431.85,
+                          "expense":  36299.49,
+                          "closing":  70716.66,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  70716.66,
+                          "saving":  15986.31,
+                          "growth":  1287.32,
+                          "expense":  37493.65,
+                          "closing":  50496.64,
+                          "studying":  "Child 2"
+                      },
+                      {
+                          "opening":  50496.64,
+                          "saving":  0,
+                          "growth":  0,
+                          "expense":  38728.89,
+                          "closing":  11767.74,
+                          "studying":  "Child 2"
+                      }
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  36244.656673236022,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  25686.698464058572,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  "Not available",
+                            "note":  "This qualification is not offered (or has no typical duration) in the selected country.",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  87671.860468192113,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  445421.95234259521,
+                            "note":  "Estimate — no published fee for this course",
+                            "current":  "Current plan"
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  "Not available",
+                            "note":  "This qualification is not offered (or has no typical duration) in the selected country.",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: USD 0 needed now + USD 491,366 family savings + USD 142,664 investment growth - USD 622,262 education expenses = USD 11,768 left at the end."
+    },
+    {
+        "name":  "blank start: nothing entered",
+        "currency":  "USD",
+        "total":  0,
+        "saving":  0,
+        "lump":  0,
+        "planYears":  0,
+        "children":  [
+                         {
+                             "total":  0,
+                             "message":  "Enter this child\u0027s details on the Inputs sheet."
+                         }
+                     ],
+        "years":  [
+
+                  ],
+        "compare":  [
+                        {
+                            "country":  "Pakistan",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "India",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "USA",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "UK",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Australia",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        },
+                        {
+                            "country":  "Germany",
+                            "total":  "",
+                            "note":  "",
+                            "current":  ""
+                        }
+                    ],
+        "addsUp":  "Adds up: USD 0 needed now + USD 0 family savings + USD 0 investment growth - USD 0 education expenses = USD 0 left at the end."
+    }
+]

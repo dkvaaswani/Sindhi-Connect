@@ -88,13 +88,28 @@ Any static file server in `frontend/` works, for example the PowerShell server u
 
 - `tests/edu-calc/engine.test.js` — engine rules (Node 18+: `node --test tests/edu-calc/engine.test.js`). The same
   checks were run in the browser for this release (see TEST_REPORT.md).
-- `tests/edu-calc/excel_parity.py`, `parity-js.js` — Excel-vs-web parity; to be updated together with the workbook.
+- `tests/edu-calc/excel-parity.ps1` + `parity-js.js` + `parity-scenarios.json` — Excel-vs-web parity (see below).
 
 ## Excel workbook
 
-Still on the v1 method and hidden from the page. To rebuild: install Python 3 and `pip install openpyxl`, update
-`tools/edu-calc/build.py` for dataset v2 (inputs and results described in METHODOLOGY.md), run it, then run the parity
-check with LibreOffice and Node.js. Keep a copy of the current workbook as a backup before replacing it.
+`frontend/downloads/Children_Education_Fund_Calculator.xlsx` (method v2, formulas only, no macros) is built from the
+master dataset. Rebuild it after every dataset or method change (Windows, Python 3 + openpyxl, Microsoft Excel):
+
+```
+py tools/edu-calc/build.py
+powershell -ExecutionPolicy Bypass -File tests/edu-calc/excel-parity.ps1 -Store
+```
+
+The first command writes the workbook. The second runs every scenario in `tests/edu-calc/parity-scenarios.json`
+through Excel, writes `tests/edu-calc/excel-results.json`, then resets the workbook to its blank USD start and saves it
+with calculated values. Compare with the web engine: `node tests/edu-calc/parity-js.js` (or load `parity-js.js` in the
+calculator page and call `parityCompare(EduCalc, EDU_DATA, scenarios, results)`). Every total, every yearly
+roll-forward figure and every country-comparison total must match.
+
+How it mirrors the engine: published fee records are on the Fee Records sheet and averaged live (so a changed fee
+increase re-averages them); planning estimates, pre-stage fees, living costs, visas and travel are resolved by
+`build.py` with the engine's rules and stored as tables; each child's costs, the amount needed now, the yearly saving
+and the roll-forward are live formulas. The v1 workbook and builder are kept in `tools/edu-calc/backup/`.
 
 ## Deploying
 

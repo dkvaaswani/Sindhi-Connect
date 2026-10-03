@@ -1,41 +1,43 @@
-"""Build the education calculator assets from the master dataset.
+"""Build the Excel version of the Children's Future Education Fund calculator (method v2).
 
-    python3 tools/edu-calc/build.py
+    py tools/edu-calc/build.py
 
-Reads   data/education/education-costs.json   (the single source of truth)
-Writes  frontend/edu-calc/education-data.js    (dataset for the web page)
-        frontend/downloads/Children_Education_Fund_Calculator.xlsx  (formula-driven workbook)
-        docs/education-calculator/SOURCES.md   (research-source register)
+Reads   data/education/education-costs.json                       (the master dataset)
+Writes  frontend/downloads/Children_Education_Fund_Calculator.xlsx (formula-driven workbook, no macros)
 
-Needs Python 3 with openpyxl. Recalculate the workbook afterwards (open it in Excel, or
-LibreOffice headless) so cached values exist for previewers.
+The workbook follows the same rules as frontend/edu-calc/calc-engine.js (see
+docs/education-calculator/METHODOLOGY.md):
+  - published fee records are kept in the workbook and averaged with live formulas, so a changed
+    fee increase re-averages them exactly as the website does;
+  - planning estimates, pre-stage fees, living costs, visas and travel are resolved here with the
+    same rules and stored as tables;
+  - each child's yearly costs, the amount needed now, the required yearly saving and the yearly fund
+    roll-forward are all live formulas.
+
+Needs Python 3 with openpyxl. Then run tests/edu-calc/excel-parity.ps1 (needs Excel) to recalculate
+the workbook, store its values, and check it against the web engine.
 """
 import json
+import math
 import os
-import sys
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, Reference
-from openpyxl.formatting.rule import FormulaRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Protection, Side
 from openpyxl.utils import get_column_letter as L
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
-from openpyxl.worksheet.formula import ArrayFormula
-from openpyxl.worksheet.table import Table, TableStyleInfo
-from openpyxl.comments import Comment
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DATA = os.path.join(ROOT, "data", "education", "education-costs.json")
-OUT_JS = os.path.join(ROOT, "frontend", "edu-calc", "education-data.js")
 OUT_XLSX = os.path.join(ROOT, "frontend", "downloads", "Children_Education_Fund_Calculator.xlsx")
-OUT_SOURCES = os.path.join(ROOT, "docs", "education-calculator", "SOURCES.md")
 
-SPARE = 100          # blank rows kept inside named ranges so new records are picked up
-ROWS = 60            # projection years per child
 KIDS = 4
+ROWS = 60           # plan years per child (age 0 + entry age up to 45 + course length)
+STUDY = 10          # study years per course (longest course is 8 years)
+CHART_ROWS = 30
 
 # ---- styles (Sindhi Connect "Midnight & Gold") ----
-INK, GOLD, PAPER, LINE = "0E1016", "E9A825", "FAF8F4", "DDD8CC"
+INK, GOLD, LINE = "0E1016", "E9A825", "DDD8CC"
 F = "Arial"
 font = lambda **k: Font(name=F, size=k.pop("size", 10), **k)
 TITLE = font(size=16, bold=True, color=INK)
@@ -45,27 +47,44 @@ HDR_FILL = PatternFill("solid", fgColor=INK)
 INPUT_FILL = PatternFill("solid", fgColor="FFF4D6")
 CALC_FILL = PatternFill("solid", fgColor="F2F2F2")
 GOLD_FILL = PatternFill("solid", fgColor=GOLD)
-BLUE = font(color="0000FF")
-GREEN = font(color="008000")
 MUTED = font(color="565B66", italic=True, size=9)
 BOLD = font(bold=True)
+BIG = font(size=14, bold=True, color=INK)
 thin = Side(style="thin", color=LINE)
 BOX = Border(left=thin, right=thin, top=thin, bottom=thin)
 WRAP = Alignment(wrap_text=True, vertical="top")
-NUM = '#,##0;(#,##0);"-"'
-NUM2 = '#,##0.00;(#,##0.00);"-"'
-PCT = '0.0%;(0.0%);"-"'
+NUM = '#,##0;-#,##0;"-"'
+PCT = '0.0%'
+
+# Cost lines, in the engine's order: key, label, increase type, timing, scholarship applies
+ITEMS = [
+    ("tuition", "Tuition", "tuition", "annual", True),
+    ("accommodation", "Accommodation", "living", "annual", True),
+    ("food", "Food", "living", "annual", True),
+    ("transport", "Local transport", "living", "annual", True),
+    ("healthInsurance", "Health insurance", "living", "annual", True),
+    ("books", "Books and supplies", "living", "annual", True),
+    ("otherFees", "Other university and course fees", "tuition", "annual", True),
+    ("admission", "Admission and one-time fees", "tuition", "once", True),
+    ("visaApplication", "Visa and application", "living", "once", False),
+    ("travelRelocation", "Travel and relocation", "living", "once", False),
+]
+PRE_ITEMS = [("preTuition", "Pre-stage tuition (e.g. pre-medical degree)"),
+             ("preOtherFees", "Pre-stage other fees")]
+LIVING_KEYS = ["accommodation", "food", "transport", "healthInsurance", "books"]
+GROUPS = [("Tuition", ["tuition"]), ("Accommodation", ["accommodation"]), ("Food", ["food"]),
+          ("Local transport", ["transport"]), ("Health insurance", ["healthInsurance"]),
+          ("Books and supplies", ["books"]), ("Other university and course fees", ["otherFees", "admission"]),
+          ("Visa, application, travel and relocation", ["visaApplication", "travelRelocation"])]
+STATUS_LABEL = ('IF({s}="verified","Published figure",IF({s}="estimated","Estimated — please review",'
+                'IF({s}="notNeeded","Not needed",IF({s}="override","Your figure",IF({s}="missing","No figure yet — enter your own","")))))')
 
 
 def q(sheet):
     return "'" + sheet + "'"
 
 
-def name(wb, nm, sheet, ref):
-    wb.defined_names[nm] = DefinedName(nm, attr_text=f"{q(sheet)}!{ref}")
-
-
-def put(ws, ref, value, f=None, fill=None, fmt=None, wrap=False, lock=None, border=False):
+def put(ws, ref, value, f=None, fill=None, fmt=None, wrap=False, lock=None, border=False, align=None):
     c = ws[ref]
     c.value = value
     c.font = f or font()
@@ -75,6 +94,8 @@ def put(ws, ref, value, f=None, fill=None, fmt=None, wrap=False, lock=None, bord
         c.number_format = fmt
     if wrap:
         c.alignment = WRAP
+    if align:
+        c.alignment = align
     if lock is not None:
         c.protection = Protection(locked=lock)
     if border:
@@ -90,961 +111,938 @@ def header_row(ws, row, col, labels, widths=None):
             ws.column_dimensions[L(col + i)].width = widths[i]
 
 
-def add_table(ws, nm, ref):
-    t = Table(displayName=nm, ref=ref)
-    t.tableStyleInfo = TableStyleInfo(name="TableStyleLight1", showRowStripes=True)
-    ws.add_table(t)
+def isnum(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
 
 
-def yn(v):
-    return "Yes" if v else "No"
-
-
-def build_js(data):
-    with open(OUT_JS, "w", encoding="utf-8") as fh:
-        fh.write("/* Generated by tools/edu-calc/build.py from data/education/education-costs.json — do not edit by hand. */\n")
-        fh.write("window.EDU_DATA = ")
-        json.dump(data, fh, ensure_ascii=False, indent=1)
-        fh.write(";\n")
-
-
-def build_sources(data):
-    lines = ["# Research source register", "",
-             f"Dataset version {data['version']}, verified {data['datasetDate']}. Generated from "
-             "`data/education/education-costs.json` by `tools/edu-calc/build.py` — edit the JSON, not this file.", "",
-             "Status key: *Verified – official source* = figure read from the institution's own page; *Derived* = computed from "
-             "official figures (method in notes); *Estimated* = official rate with an assumed quantity; *Historical* / *Range* / "
-             "*Regulatory cap* = shown for reference, excluded from university averages.", "",
-             "## Tuition and fee records", "",
-             "| ID | Country | Qualification | Institution | Category | Fee year | Currency | Annual tuition | Status | Source |",
-             "|---|---|---|---|---|---|---|---|---|---|"]
-    for r in data["records"]:
-        lines.append(f"| {r['id']} | {r['country']} | {r['qualification']} | {r['university']} | {r['studentCategory']} | "
-                     f"{r['feeYear']} | {r['currency']} | {r['tuition']:,.0f} | {r['status']} | [link]({r['sourceUrl']}) |")
-    lines += ["", "## Living-cost benchmarks", "", "| Country | Category | Currency | Year | Status | Source |", "|---|---|---|---|---|---|"]
-    for l in data["livingBenchmarks"]:
-        lines.append(f"| {l['country']} | {l['studentCategory']} | {l['currency']} | {l['year']} | {l['status']} | [link]({l['sourceUrl']}) |")
-    fx = data["exchangeRates"]
-    lines += ["", "## Exchange rates", "", f"Reference date {fx['date']}. {fx['convention']}", ""]
-    lines += [f"- {u}" for u in fx["sources"]]
-    lines += ["", "## Known coverage gaps", ""] + [f"- {g}" for g in data["coverageGaps"]]
-    with open(OUT_SOURCES, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(lines) + "\n")
+def num(v):
+    return v if isnum(v) else 0
 
 
 # =====================================================================
-def build_xlsx(data):
+# Cost rules (same as calc-engine.js)
+# =====================================================================
+class Rules:
+    def __init__(self, d):
+        self.d = d
+        self.plan = d["planStartYear"]
+        self.rates = d["exchangeRates"]["rates"]
+
+    def country(self, name):
+        return next((c for c in self.d["countries"] if c["name"] == name), None)
+
+    def qual(self, name):
+        return next((x for x in self.d["qualifications"] if x["name"] == name), None)
+
+    def convert(self, amount, frm, to):
+        if frm == to or not amount:
+            return amount
+        return amount / self.rates[frm] * self.rates[to]
+
+    def record_fee_status(self, r):
+        return r.get("feeStatus") or self.d.get("feeStatusByCategory", {}).get(r.get("studentCategory")) or "international"
+
+    def duration(self, country, qualification):
+        d = next((x for x in self.d["courseDurations"] if x["country"] == country and x["qualification"] == qualification), None)
+        if d:
+            return {"years": d.get("years"), "available": isnum(d.get("years")) and d["years"] > 0,
+                    "preStage": d.get("preStage"), "note": d.get("note", "")}
+        recs = [r for r in self.d["records"] if r["country"] == country and r["qualification"] == qualification and isnum(r.get("durationYears"))]
+        if recs:
+            return {"years": sum(r["durationYears"] for r in recs) / len(recs), "available": True, "preStage": None, "note": ""}
+        return {"years": None, "available": False, "preStage": None, "note": "No typical duration recorded."}
+
+    def tuition_inflation(self, country, qualification, fee_status):
+        q_ = self.qual(qualification)
+        group = q_["group"] if q_ else None
+        lst = [t for t in self.d.get("tuitionInflation", []) if t["country"] == country and
+               (not t.get("feeStatus") or not fee_status or t.get("feeStatus") == fee_status)]
+        best = lambda arr: sorted(arr, key=lambda t: 0 if t.get("feeStatus") else 1)[0] if arr else None
+        hit = (best([t for t in lst if t.get("qualification") == qualification]) or
+               best([t for t in lst if group and t.get("group") == group]) or
+               best([t for t in lst if not t.get("group") and not t.get("qualification")]))
+        if hit:
+            return hit["rate"]
+        info = self.country(country)
+        return info["tuitionInflation"] if info else 0.05
+
+    def used_records(self, country, qualification, fee_status):
+        recs = [r for r in self.d["records"] if r["country"] == country and r["qualification"] == qualification and
+                r.get("includeInAverage") and isnum(r.get("tuition")) and self.record_fee_status(r) == fee_status]
+        if not recs:
+            return None, []
+        counts = {}
+        for r in recs:
+            counts[r["currency"]] = counts.get(r["currency"], 0) + 1
+        ccy = sorted(counts.keys(), key=lambda c: -counts[c])[0]   # stable, like the engine
+        return ccy, [r for r in recs if r["currency"] == ccy]
+
+    def verified(self, country, qualification, fee_status, rate):
+        ccy, same = self.used_records(country, qualification, fee_status)
+        if not same:
+            return None
+        grow = lambda r: (1 + rate) ** (self.plan - (r.get("feeYearStart") or self.plan))
+        mean = lambda vals: sum(vals) / len(vals)
+        return {"status": "verified", "currency": ccy, "baseYear": self.plan, "count": len(same),
+                "tuition": mean([r["tuition"] * grow(r) for r in same]),
+                "otherFees": mean([num(r.get("otherMandatoryAnnual")) * grow(r) for r in same]),
+                "admission": mean([(num(r.get("oneTimeAdmission")) + num(r.get("otherOneTime"))) * grow(r) for r in same]),
+                "note": "From one university's published fees." if len(same) == 1 else
+                        "Average of %d universities' published fees." % len(same)}
+
+    def derive(self, country, fee_status, rule):
+        def ver(qn, fs):
+            return self.verified(country, qn, fs, self.tuition_inflation(country, qn, fs))
+        if rule.get("average") == "nonMedicalDegrees":
+            info = self.country(country)
+            ccy = info["currency"] if info else "USD"
+            lst = [ver(x["name"], fee_status) for x in self.d["qualifications"]
+                   if x["kind"] == "degree" and x["group"] != "medical" and x["name"] != "Other Qualification"]
+            lst = [b for b in lst if b]
+            if not lst:
+                return None
+            avg = lambda k: sum(self.convert(b[k], b["currency"], ccy) for b in lst) / len(lst)
+            return {"currency": ccy, "baseYear": self.plan, "tuition": avg("tuition"), "otherFees": avg("otherFees"), "admission": avg("admission")}
+        src = ver(rule["qualification"], rule.get("feeStatus") or fee_status)
+        if not src:
+            return None
+        m = rule["multiplier"] if isnum(rule.get("multiplier")) else 1
+        return {"currency": src["currency"], "baseYear": src["baseYear"], "tuition": src["tuition"] * m,
+                "otherFees": src["otherFees"] * m, "admission": src["admission"] * m}
+
+    def estimate(self, country, qualification, fee_status):
+        """The engine's fee benchmark when no published record applies (estimate or missing)."""
+        est = next((e for e in self.d.get("estimates", []) if e["country"] == country and e["qualification"] == qualification and
+                    (e["feeStatus"] == fee_status or e["feeStatus"] == "all")), None)
+        if est and est.get("derive"):
+            dd = self.derive(country, fee_status, est["derive"])
+            if dd:
+                return dict(dd, status="estimated", note=est.get("basis", ""))
+        elif est:
+            return {"status": "estimated", "currency": est["currency"], "baseYear": est.get("year") or self.plan,
+                    "tuition": num(est.get("tuition")), "otherFees": num(est.get("otherFees")), "admission": num(est.get("admission")),
+                    "note": est.get("basis", "")}
+        info = self.country(country)
+        return {"status": "missing", "currency": info["currency"] if info else "USD", "baseYear": self.plan,
+                "tuition": 0, "otherFees": 0, "admission": 0,
+                "note": "No published fee found yet for this course in this country. Please enter your own estimate."}
+
+    def bench(self, country, qualification, fee_status, rate):
+        return self.verified(country, qualification, fee_status, rate) or self.estimate(country, qualification, fee_status)
+
+    def living_item(self, country, key, fee_status):
+        living = next((x for x in self.d.get("living", []) if x["country"] == country), None)
+        info = self.country(country)
+        missing = {"amount": 0, "currency": info["currency"] if info else "USD", "baseYear": self.plan, "status": "missing"}
+        if not living or key not in living.get("items", {}):
+            return missing
+        it = living["items"][key]
+        if it.get("domestic") or it.get("international"):
+            it = it.get(fee_status)
+            if not it:
+                return missing
+        return {"amount": num(it.get("amount")), "currency": it.get("currency") or living["currency"],
+                "baseYear": it.get("year") or living.get("year") or self.plan, "status": it.get("status") or "verified"}
+
+    def fee_status(self, country, nationality):
+        info = self.country(country)
+        if not info or not nationality:
+            return "international"
+        return "domestic" if nationality in (info.get("domesticNationalities") or []) else "international"
+
+    def visa(self, country, nationality):
+        v = next((x for x in self.d.get("visas", []) if x["country"] == country), None)
+        if self.fee_status(country, nationality) == "domestic":
+            return {"amount": 0, "currency": v["currency"] if v else "USD", "baseYear": self.plan, "status": "notNeeded"}
+        if not v:
+            return {"amount": 0, "currency": "USD", "baseYear": self.plan, "status": "missing"}
+        sp = next((x for x in v.get("byNationality", []) if x["nationality"] == nationality), None)
+        if sp:
+            return {"amount": sp["amount"], "currency": sp.get("currency") or v["currency"], "status": sp.get("status") or "verified",
+                    "baseYear": sp.get("year") or v.get("year") or self.plan}
+        return {"amount": v["amount"], "currency": v["currency"], "status": v.get("status") or "verified",
+                "baseYear": v.get("year") or self.plan}
+
+    def travel(self, country, residence):
+        t = self.d.get("travel", {})
+        dest = next((x for x in t.get("toCountry", []) if x["country"] == country), None)
+        if not dest:
+            return {"amount": 0, "currency": "USD", "baseYear": self.plan, "status": "missing"}
+        same = bool(residence) and residence == country
+        place = next((p for p in self.d.get("places", []) if p["name"] == residence), None)
+        region = place["region"] if place else "other"
+        fare = dest["domestic"] if same else (dest["byRegion"][region] if isnum(dest["byRegion"].get(region)) else dest["byRegion"]["other"])
+        setup = num(t.get("domesticSetup")) if same else num(t.get("setup"))
+        return {"amount": fare + setup, "currency": t.get("currency") or "USD", "status": "estimated", "baseYear": t.get("year") or self.plan}
+
+
+# =====================================================================
+# Workbook
+# =====================================================================
+def build_xlsx(d):
+    R = Rules(d)
     wb = Workbook()
-    ws_in = wb.active
-    ws_in.title = "Parent Inputs"
-    ws_db = wb.create_sheet("Education Cost Database")
-    ws_as = wb.create_sheet("Assumptions and Currency")
-    ws_fc = wb.create_sheet("Education Cost Forecast")
-    ws_sv = wb.create_sheet("Savings Calculator")
-    ws_ds = wb.create_sheet("Parent Dashboard")
-    ws_rs = wb.create_sheet("Research Sources & Methodology")
-    for ws in wb.worksheets:
-        ws.sheet_view.showGridLines = False
+    names = {}
 
-    recs = data["records"]
-    A = data["assumptions"]
+    def name(nm, sheet, ref):
+        wb.defined_names[nm] = DefinedName(nm, attr_text=f"{q(sheet)}!{ref}")
+        names[nm] = True
 
-    # ------------------------------------------------------------------ Assumptions and Currency
-    S = ws_as.title
-    put(ws_as, "A1", "Assumptions and Currency", TITLE)
-    put(ws_as, "A2", "Defaults used when a parent leaves an assumption blank on 'Parent Inputs'. Yellow cells are editable. "
-        "These are illustrative planning assumptions, not forecasts, recommendations or guaranteed rates.", MUTED)
-    ws_as.column_dimensions["A"].width = 44
-    for col, w in zip("BCDEFGH", [16, 16, 30, 14, 14, 14, 60]):
-        ws_as.column_dimensions[col].width = w
-    scal = [("Plan start year (academic year starting)", data["planStartYear"], "PlanStartYear", "0", "Year 1 of every projection."),
-            ("Default college-entry age", A["collegeEntryAge"], "DefEntryAge", "0", ""),
-            ("Default annual increase in contributions", A["contributionEscalation"], "DefEsc", PCT, "Contributions rise by this % each year."),
-            ("Default contingency allowance", A["contingency"], "DefCont", PCT, "Added on top of all costs for surprises."),
-            ("Default annual exchange-rate drift", A["fxDrift"], "DefFxDrift", PCT,
-             "Yearly % change in the reporting-currency price of the fee currency (e.g. 5% = your currency weakens 5%/yr)."),
-            ("Scenario spread for lower/higher return (web page)", A["scenarioSpread"], "ScenarioSpread", PCT, "Illustrative only.")]
-    put(ws_as, "A4", "General defaults", H2)
-    for i, (lab, val, nm, fmt, note) in enumerate(scal):
-        r = 5 + i
-        put(ws_as, f"A{r}", lab)
-        put(ws_as, f"B{r}", val, BLUE, INPUT_FILL, fmt, lock=False, border=True)
-        put(ws_as, f"D{r}", note, MUTED)
-        name(wb, nm, S, f"$B${r}")
-    r0 = 12
-    put(ws_as, f"A{r0}", "Exchange rates (tblExchangeRates)", H2)
-    fx = data["exchangeRates"]
-    header_row(ws_as, r0 + 1, 1, ["Currency", "Units per 1 USD", "Reference date", "Source"])
-    for i, c in enumerate(data["currencies"]):
-        r = r0 + 2 + i
-        put(ws_as, f"A{r}", c, border=True)
-        put(ws_as, f"B{r}", fx["rates"][c], BLUE, INPUT_FILL, "0.0000", lock=False, border=True)
-        put(ws_as, f"C{r}", fx["date"], border=True)
-        put(ws_as, f"D{r}", "SBP M2M revaluation rate" if c == "PKR" else ("Base" if c == "USD" else "ECB euro reference rates (cross-rate)"),
-            border=True)
-    rl = r0 + 1 + len(data["currencies"])
-    add_table(ws_as, "tblExchangeRates", f"A{r0+1}:D{rl}")
-    name(wb, "FX_Ccy", S, f"$A${r0+2}:$A${rl}")
-    name(wb, "FX_Rate", S, f"$B${r0+2}:$B${rl}")
-    name(wb, "FX_Date", S, f"$C${r0+2}")
-    put(ws_as, f"A{rl+1}", "Convention: " + fx["convention"], MUTED, wrap=True)
-    ws_as.merge_cells(f"A{rl+1}:H{rl+1}")
-    ws_as.row_dimensions[rl + 1].height = 42
+    S_START, S_IN, S_DASH, S_CMP = "Start Here", "Inputs", "Dashboard", "Compare Countries"
+    S_DB, S_REC, S_LIV, S_VT, S_AS, S_SRC, S_LISTS, S_CC = ("Cost Database", "Fee Records", "Living Costs", "Visas and Travel",
+                                                          "Assumptions and Currency", "Sources and Method", "Lists", "Compare Calc")
+    ws_start = wb.active
+    ws_start.title = S_START
+    ws_in = wb.create_sheet(S_IN)
+    ws_dash = wb.create_sheet(S_DASH)
+    ws_cmp = wb.create_sheet(S_CMP)
+    kid_ws = [wb.create_sheet("Child %d" % (i + 1)) for i in range(KIDS)]
+    ws_db, ws_rec, ws_liv, ws_vt, ws_as, ws_src = (wb.create_sheet(s) for s in (S_DB, S_REC, S_LIV, S_VT, S_AS, S_SRC))
+    ws_lists, ws_cc = wb.create_sheet(S_LISTS), wb.create_sheet(S_CC)
 
-    r1 = rl + 3
-    put(ws_as, f"A{r1}", "Inflation assumptions and country defaults (tblInflation)", H2)
-    header_row(ws_as, r1 + 1, 1, ["Education country", "Currency", "Default student category", "Default duration (yrs)",
-                                  "Tuition inflation", "Living-cost inflation", "Note"])
-    for i, c in enumerate(data["countries"]):
-        r = r1 + 2 + i
-        for col, v, fmt in [("A", c["name"], None), ("B", c["currency"], None), ("C", c["defaultCategory"], None),
-                            ("D", c["defaultDuration"], "0.0")]:
-            put(ws_as, f"{col}{r}", v, fmt=fmt, border=True)
-        put(ws_as, f"E{r}", c["tuitionInflation"], BLUE, INPUT_FILL, PCT, lock=False, border=True)
-        put(ws_as, f"F{r}", c["livingInflation"], BLUE, INPUT_FILL, PCT, lock=False, border=True)
-        put(ws_as, f"G{r}", c["inflationNote"], MUTED, border=True)
-    rl2 = r1 + 1 + len(data["countries"])
-    add_table(ws_as, "tblInflation", f"A{r1+1}:G{rl2}")
-    for nm, col in [("CO_Name", "A"), ("CO_Ccy", "B"), ("CO_Cat", "C"), ("CO_Dur", "D"), ("CO_TuiInf", "E"), ("CO_LivInf", "F")]:
-        name(wb, nm, S, f"${col}${r1+2}:${col}${rl2}")
+    countries = [c["name"] for c in d["countries"]]
+    quals = [x["name"] for x in d["qualifications"]]
+    places = [p["name"] for p in d["places"]]
+    ccys = list(d["currencies"])
 
-    r2 = rl2 + 3
-    put(ws_as, f"A{r2}", "Expected investment return by reporting currency (tblReturns)", H2)
-    header_row(ws_as, r2 + 1, 1, ["Reporting currency", "Default annual return", "Note"])
-    for i, c in enumerate(data["currencies"]):
-        r = r2 + 2 + i
-        put(ws_as, f"A{r}", c, border=True)
-        put(ws_as, f"B{r}", A["returnsByCurrency"][c], BLUE, INPUT_FILL, PCT, lock=False, border=True)
-        put(ws_as, f"C{r}", "Illustrative nominal return – not a prediction or a guaranteed rate", MUTED, border=True)
-    rl3 = r2 + 1 + len(data["currencies"])
-    add_table(ws_as, "tblReturns", f"A{r2+1}:C{rl3}")
-    name(wb, "RT_Ccy", S, f"$A${r2+2}:$A${rl3}")
-    name(wb, "RT_Ret", S, f"$B${r2+2}:$B${rl3}")
+    # ---------------- Lists (hidden) ----------------
+    ws_lists["A1"], ws_lists["B1"], ws_lists["C1"], ws_lists["D1"], ws_lists["E1"] = "Countries", "Qualifications", "Places", "Currencies", "Domestic (country|nationality)"
+    for i, v in enumerate(countries):
+        ws_lists.cell(row=2 + i, column=1, value=v)
+    for i, v in enumerate(quals):
+        ws_lists.cell(row=2 + i, column=2, value=v)
+    for i, v in enumerate(places):
+        ws_lists.cell(row=2 + i, column=3, value=v)
+    for i, v in enumerate(["Automatic"] + ccys):
+        ws_lists.cell(row=2 + i, column=4, value=v)
+    dom = [c["name"] + "|" + n for c in d["countries"] for n in (c.get("domesticNationalities") or [])]
+    for i, v in enumerate(dom):
+        ws_lists.cell(row=2 + i, column=5, value=v)
+    ws_lists["G1"], ws_lists["H1"], ws_lists["I1"] = "Country", "Currency", "Default living-cost increase"
+    for i, c in enumerate(d["countries"]):
+        ws_lists.cell(row=2 + i, column=7, value=c["name"])
+        ws_lists.cell(row=2 + i, column=8, value=c["currency"])
+        ws_lists.cell(row=2 + i, column=9, value=c["livingInflation"])
+    nC = len(countries)
+    name("DomKey", S_LISTS, f"$E$2:$E${1 + len(dom)}")
+    name("Ctry_Name", S_LISTS, f"$G$2:$G${1 + nC}")
+    name("Ctry_Ccy", S_LISTS, f"$H$2:$H${1 + nC}")
+    name("Ctry_LInf", S_LISTS, f"$I$2:$I${1 + nC}")
+    list_countries = f"{q(S_LISTS)}!$A$2:$A${1 + nC}"
+    list_quals = f"{q(S_LISTS)}!$B$2:$B${1 + len(quals)}"
+    list_places = f"{q(S_LISTS)}!$C$2:$C${1 + len(places)}"
+    list_ccys = f"{q(S_LISTS)}!$D$2:$D${2 + len(ccys)}"
+    ws_lists.sheet_state = "hidden"
 
-    # Lists for drop-downs (column J onwards)
-    cats = sorted({r["studentCategory"] for r in recs} | {c["defaultCategory"] for c in data["countries"]})
-    unis = ["University average"] + sorted({r["university"] for r in recs})
-    lists = [("Countries", [c["name"] for c in data["countries"]], "LST_Country"),
-             ("Currencies", data["currencies"], "LST_Ccy"),
-             ("Qualifications", data["qualifications"], "LST_Qual"),
-             ("Student categories", cats, "LST_Cat"),
-             ("Universities", unis, "LST_Uni"),
-             ("Contribution mode", ["Monthly", "Annual"], "LST_Mode")]
-    for j, (lab, vals, nm) in enumerate(lists):
-        col = L(10 + j)
-        ws_as.column_dimensions[col].width = 26
-        put(ws_as, f"{col}4", "List: " + lab, BOLD)
-        for i, v in enumerate(vals):
-            put(ws_as, f"{col}{5+i}", v, border=True)
-        name(wb, nm, S, f"${col}$5:${col}${4+len(vals)}")
+    # ---------------- Assumptions and Currency ----------------
+    ws = ws_as
+    put(ws, "A1", "Assumptions and currency", TITLE)
+    put(ws, "A3", "Plan start year (academic year starting)", BOLD)
+    put(ws, "B3", d["planStartYear"])
+    name("PlanYear", S_AS, "$B$3")
+    put(ws, "A4", "Dataset checked on", BOLD)
+    put(ws, "B4", d["datasetDate"])
+    put(ws, "A6", "Exchange rates - units of each currency per 1 USD (" + d["exchangeRates"]["date"] + "). Enter your own rate in column C to override.", H2)
+    header_row(ws, 7, 1, ["Currency", "Dataset rate", "Your rate (optional)", "Rate used"], [34, 16, 20, 16])
+    for i, c in enumerate(ccys):
+        r = 8 + i
+        put(ws, f"A{r}", c, border=True)
+        put(ws, f"B{r}", d["exchangeRates"]["rates"][c], fmt="0.0000", border=True)
+        put(ws, f"C{r}", None, fill=INPUT_FILL, fmt="0.0000", lock=False, border=True)
+        put(ws, f"D{r}", f"=IF(AND(ISNUMBER(C{r}),C{r}>0),C{r},B{r})", fill=CALC_FILL, fmt="0.0000", border=True)
+    last = 7 + len(ccys)
+    name("FxCodes", S_AS, f"$A$8:$A${last}")
+    name("FxUsed", S_AS, f"$D$8:$D${last}")
+    put(ws, f"A{last + 1}", d["exchangeRates"].get("convention", ""), MUTED, wrap=True)
+    ws.merge_cells(f"A{last + 1}:D{last + 1}")
+    ws.row_dimensions[last + 1].height = 60
+    r0 = last + 3
+    put(ws, f"A{r0}", "Default investment return by results currency (used when the Inputs return is blank)", H2)
+    header_row(ws, r0 + 1, 1, ["Currency", "Yearly return"])
+    rets = d["assumptions"]["returnsByCurrency"]
+    for i, c in enumerate(rets):
+        put(ws, f"A{r0 + 2 + i}", c, border=True)
+        put(ws, f"B{r0 + 2 + i}", rets[c], fmt=PCT, border=True)
+    name("Ret_Ccy", S_AS, f"$A${r0 + 2}:$A${r0 + 1 + len(rets)}")
+    name("Ret_Rate", S_AS, f"$B${r0 + 2}:$B${r0 + 1 + len(rets)}")
+    put(ws, f"A{r0 + 2 + len(rets)}", "Any other currency: 5%. " + d["assumptions"].get("returnNote", ""), MUTED, wrap=True)
+    ws.merge_cells(f"A{r0 + 2 + len(rets)}:D{r0 + 2 + len(rets)}")
+    ws.row_dimensions[r0 + 2 + len(rets)].height = 40
 
-    # Monthly timing factor (depends on the return used)
-    rf = rl3 + 3
-    put(ws_as, f"A{rf}", "Derived timing factors", H2)
-    put(ws_as, f"A{rf+1}", "Monthly contribution timing factor (year-end value of 12 end-of-month payments ÷ 12)")
-    put(ws_as, f"B{rf+1}", "=IF(RetRate=0,1,(RetRate/((1+RetRate)^(1/12)-1))/12)", fmt="0.000000", fill=CALC_FILL, border=True)
-    name(wb, "MonthlyFactor", S, f"$B${rf+1}")
-    put(ws_as, f"A{rf+2}", "Contribution factor used (Monthly = factor above; Annual = 1, paid at year end)")
-    put(ws_as, f"B{rf+2}", '=IF(ContribMode="Annual",1,MonthlyFactor)', fmt="0.000000", fill=CALC_FILL, border=True)
-    name(wb, "UnitFactor", S, f"$B${rf+2}")
-    put(ws_as, f"A{rf+3}", "Exchange-rate reference date")
-    put(ws_as, f"B{rf+3}", "=FX_Date", fill=CALC_FILL, border=True)
+    FX = lambda ccy: f"INDEX(FxUsed,MATCH({ccy},FxCodes,0))"
 
-    # ------------------------------------------------------------------ Education Cost Database
-    S = ws_db.title
-    put(ws_db, "A1", "Education Cost Database", TITLE)
-    put(ws_db, "A2", "Researched fees (tblEducationCosts), university averages (tblTuitionBenchmarks), living costs (tblLivingCosts) "
-        "and course durations (tblCourseDurations). Add a record by typing in the first empty row inside a table; set "
-        "'Include in average' to No for historical, estimated-range or regulatory figures. Verified "
-        + data["datasetDate"] + ".", MUTED)
-    cols = [("ID", "id", 7), ("Country", "country", 11), ("Qualification", "qualification", 22), ("Specialisation", "specialisation", 26),
-            ("University Name", "university", 30), ("Institution Type", "institutionType", 16), ("Student Category", "studentCategory", 22),
-            ("Programme Level", "level", 16), ("Academic Fee Year", "feeYear", 16), ("Fee Year Start", "feeYearStart", 9),
-            ("Programme Duration", "durationYears", 10), ("Annual Tuition Fee", "tuition", 13),
-            ("Accommodation Per Year", "accommodation", 13), ("Food Per Year", "food", 11), ("Transport Per Year", "transport", 11),
-            ("Health Insurance Per Year", "healthInsurance", 11), ("Books and Equipment Per Year", "books", 11),
-            ("Personal and Other Living Per Year", "personal", 11), ("Other Mandatory Annual Fees", "otherMandatoryAnnual", 13),
-            ("One-Time Admission Fees", "oneTimeAdmission", 12), ("Visa and Application Costs", "visaApplication", 11),
-            ("Initial Travel and Relocation Costs", "travelRelocation", 11), ("Other One-Time Costs", "otherOneTime", 11),
-            ("Currency", "currency", 9), ("Living Costs From This Record", "livingFromRecord", 11),
-            ("Include In Average", "includeInAverage", 10), ("Official Source URL", "sourceUrl", 40),
-            ("Source Publication or Academic Year", "sourcePublication", 36), ("Last Verified Date", "lastVerified", 12),
-            ("Benchmark Type", "benchmarkType", 16), ("Data Confidence or Verification Status", "status", 30),
-            ("Notes and Exclusions", "notes", 70), ("Key", None, 30), ("Key3", None, 30)]
-    hr = 4
-    header_row(ws_db, hr, 1, [c[0] for c in cols], [c[2] for c in cols])
-    ws_db.row_dimensions[hr].height = 54
-    money = {"tuition", "accommodation", "food", "transport", "healthInsurance", "books", "personal", "otherMandatoryAnnual",
-             "oneTimeAdmission", "visaApplication", "travelRelocation", "otherOneTime"}
-    for i, rec in enumerate(recs):
-        r = hr + 1 + i
-        for j, (lab, key, _) in enumerate(cols):
-            col = L(j + 1)
-            if key is None:
-                continue
-            v = rec.get(key)
-            if key in ("livingFromRecord", "includeInAverage"):
-                v = yn(v)
-            c = put(ws_db, f"{col}{r}", v, BLUE if key in money or key in ("durationYears", "feeYearStart") else None,
-                    fmt=NUM if key in money else None)
-        put(ws_db, f"AG{r}", f'=B{r}&"|"&C{r}&"|"&G{r}&"|"&E{r}', fill=CALC_FILL)
-        put(ws_db, f"AH{r}", f'=B{r}&"|"&C{r}&"|"&G{r}', fill=CALC_FILL)
-    last = hr + len(recs)
-    add_table(ws_db, "tblEducationCosts", f"A{hr}:{L(len(cols))}{last}")
-    end = last + SPARE
-    for nm, col in [("EC_Country", "B"), ("EC_Qual", "C"), ("EC_Uni", "E"), ("EC_Cat", "G"), ("EC_FYS", "J"), ("EC_Dur", "K"),
-                    ("EC_Tuition", "L"), ("EC_Acc", "M"), ("EC_Food", "N"), ("EC_Trans", "O"), ("EC_Ins", "P"), ("EC_Books", "Q"),
-                    ("EC_Personal", "R"), ("EC_Other", "S"), ("EC_Adm", "T"), ("EC_OtherOT", "W"), ("EC_Ccy", "X"),
-                    ("EC_LivRec", "Y"), ("EC_Inc", "Z"), ("EC_Key", "AG"), ("EC_Key3", "AH")]:
-        name(wb, nm, S, f"${col}${hr+1}:${col}${end}")
-    # spare rows keep the key formulas so typed additions match
-    for r in range(last + 1, end + 1):
-        put(ws_db, f"AG{r}", f'=IF(B{r}="","",B{r}&"|"&C{r}&"|"&G{r}&"|"&E{r})')
-        put(ws_db, f"AH{r}", f'=IF(B{r}="","",B{r}&"|"&C{r}&"|"&G{r})')
-    ws_db.freeze_panes = "F5"
-
-    # University averages (tblTuitionBenchmarks) — to the right of the spare rows, below the record table
-    ar = end + 3
-    put(ws_db, f"A{ar}", "University averages by country, qualification and student category (tblTuitionBenchmarks)", H2)
-    put(ws_db, f"A{ar+1}", "Only records with Include In Average = Yes and the same currency are averaged. One valid record = "
-        "single-institution benchmark. Living costs come from tblLivingCosts below.", MUTED)
-    combos = []
-    for rec in recs:
-        k = (rec["country"], rec["qualification"], rec["studentCategory"])
-        if k not in combos:
-            combos.append(k)
-    av_cols = ["Key", "Country", "Qualification", "Student Category", "Currency", "Valid records", "Average annual tuition",
-               "Median annual tuition", "Lowest observed fee", "Highest observed fee", "Average other mandatory fees",
-               "Average one-time admission", "Average other one-time", "Average duration", "Fee year start (avg)",
-               "Average annual living costs", "Average annual total recurring cost", "Benchmark label"]
-    ah = ar + 2
-    header_row(ws_db, ah, 1, av_cols)
-    ws_db.row_dimensions[ah].height = 54
-    crit = lambda r: f'EC_Country,$B{r},EC_Qual,$C{r},EC_Cat,$D{r},EC_Inc,"Yes",EC_Ccy,$E{r}'
-    for i, (c, ql, cat) in enumerate(combos):
-        r = ah + 1 + i
-        put(ws_db, f"A{r}", f'=B{r}&"|"&C{r}&"|"&D{r}', fill=CALC_FILL)
-        put(ws_db, f"B{r}", c); put(ws_db, f"C{r}", ql); put(ws_db, f"D{r}", cat)
-        ws_db[f"E{r}"] = ArrayFormula(f"E{r}", f'=IFERROR(INDEX(EC_Ccy,MATCH(1,(EC_Key3=$A{r})*(EC_Inc="Yes"),0)),"")')
-        put(ws_db, f"F{r}", f"=COUNTIFS({crit(r)})", fmt="0")
-        put(ws_db, f"G{r}", f"=IF($F{r}=0,0,AVERAGEIFS(EC_Tuition,{crit(r)}))", fmt=NUM)
-        cond = f'(EC_Key3=$A{r})*(EC_Inc="Yes")*(EC_Ccy=$E{r})*(EC_Tuition<>"")'
-        ws_db[f"H{r}"] = ArrayFormula(f"H{r}", f"=IF($F{r}=0,0,MEDIAN(IF({cond},EC_Tuition)))")
-        ws_db[f"I{r}"] = ArrayFormula(f"I{r}", f"=IF($F{r}=0,0,MIN(IF({cond},EC_Tuition)))")
-        ws_db[f"J{r}"] = ArrayFormula(f"J{r}", f"=IF($F{r}=0,0,MAX(IF({cond},EC_Tuition)))")
-        for col in "HIJ":
-            ws_db[f"{col}{r}"].number_format = NUM
-            ws_db[f"{col}{r}"].font = font()
-        for col, rng, fmt in [("K", "EC_Other", NUM), ("L", "EC_Adm", NUM), ("M", "EC_OtherOT", NUM), ("N", "EC_Dur", "0.0")]:
-            put(ws_db, f"{col}{r}", f"=IF($F{r}=0,0,AVERAGEIFS({rng},{crit(r)}))", fmt=fmt)
-        put(ws_db, f"O{r}", f"=IF($F{r}=0,PlanStartYear,ROUND(AVERAGEIFS(EC_FYS,{crit(r)}),0))", fmt="0")
-        lrow = (f'IFERROR(MATCH($B{r}&"|"&$D{r},LV_Key,0),IFERROR(MATCH($B{r}&"|All",LV_Key,0),'
-                f'IFERROR(MATCH($B{r},LV_Country,0),0)))')
-        put(ws_db, f"P{r}", f"=IF({lrow}=0,0,INDEX(LV_Total,{lrow})/INDEX(FX_Rate,MATCH(INDEX(LV_Ccy,{lrow}),FX_Ccy,0))"
-            f"*INDEX(FX_Rate,MATCH($E{r},FX_Ccy,0)))", fmt=NUM)
-        put(ws_db, f"Q{r}", f"=G{r}+K{r}+P{r}", fmt=NUM)
-        put(ws_db, f"R{r}", f'=IF(F{r}=0,"No valid records",IF(F{r}=1,"Single-institution benchmark","Average of "&F{r}&" universities"))')
-    al = ah + len(combos)
-    add_table(ws_db, "tblTuitionBenchmarks", f"A{ah}:R{al}")
-    for nm, col in [("AV_Key", "A"), ("AV_Ccy", "E"), ("AV_Count", "F"), ("AV_Tuition", "G"), ("AV_Other", "K"), ("AV_Adm", "L"),
-                    ("AV_OtherOT", "M"), ("AV_FYS", "O"), ("AV_Label", "R")]:
-        name(wb, nm, S, f"${col}${ah+1}:${col}${al}")
-
-    # Living costs
-    lr = al + 3
-    put(ws_db, f"A{lr}", "Living-cost benchmarks (tblLivingCosts)", H2)
-    put(ws_db, f"A{lr+1}", "Visa 'proof of funds' amounts are never used as living costs. 'Combined' is used when a source gives one total.", MUTED)
-    lv_cols = ["Key", "Country", "Student Category", "Currency", "Accommodation", "Food", "Transport", "Health Insurance",
-               "Books", "Personal", "Combined Living", "Visa One-Time", "Total Per Year", "Year", "Status", "Source URL", "Notes"]
-    lh = lr + 2
-    header_row(ws_db, lh, 1, lv_cols)
-    for i, l in enumerate(data["livingBenchmarks"]):
-        r = lh + 1 + i
-        put(ws_db, f"A{r}", f'=B{r}&"|"&C{r}', fill=CALC_FILL)
-        vals = [l["country"], l["studentCategory"], l["currency"], l["accommodation"], l["food"], l["transport"],
-                l["healthInsurance"], l["books"], l["personal"], l["combinedLiving"], l["visaApplication"]]
-        for j, v in enumerate(vals):
-            put(ws_db, f"{L(2+j)}{r}", v, BLUE if j >= 3 else None, fmt=NUM if j >= 3 else None)
-        put(ws_db, f"M{r}", f"=SUM(E{r}:K{r})", fmt=NUM, fill=CALC_FILL)
-        for j, v in enumerate([l["year"], l["status"], l["sourceUrl"], l["notes"]]):
-            put(ws_db, f"{L(14+j)}{r}", v)
-    ll = lh + len(data["livingBenchmarks"])
-    add_table(ws_db, "tblLivingCosts", f"A{lh}:Q{ll}")
-    for nm, col in [("LV_Key", "A"), ("LV_Country", "B"), ("LV_Ccy", "D"), ("LV_Acc", "E"), ("LV_Food", "F"), ("LV_Trans", "G"),
-                    ("LV_Ins", "H"), ("LV_Books", "I"), ("LV_Personal", "J"), ("LV_Comb", "K"), ("LV_Visa", "L"), ("LV_Total", "M")]:
-        name(wb, nm, S, f"${col}${lh+1}:${col}${ll}")
-
-    # Course durations
-    dr = ll + 3
-    put(ws_db, f"A{dr}", "Course durations (tblCourseDurations)", H2)
-    dh = dr + 1
-    header_row(ws_db, dh, 1, ["Key", "Country", "Qualification", "Years", "Status"])
-    for i, d in enumerate(data["courseDurations"]):
-        r = dh + 1 + i
-        put(ws_db, f"A{r}", f'=B{r}&"|"&C{r}', fill=CALC_FILL)
-        put(ws_db, f"B{r}", d["country"]); put(ws_db, f"C{r}", d["qualification"])
-        put(ws_db, f"D{r}", d["years"], BLUE, fmt="0.0"); put(ws_db, f"E{r}", d["status"])
-    dl = dh + len(data["courseDurations"])
-    add_table(ws_db, "tblCourseDurations", f"A{dh}:E{dl}")
-    name(wb, "CD_Key", S, f"$A${dh+1}:$A${dl}")
-    name(wb, "CD_Years", S, f"$D${dh+1}:$D${dl}")
-
-    # ------------------------------------------------------------------ Parent Inputs
-    S = ws_in.title
-    ws = ws_in
-    put(ws, "B1", "Children's Future Education Fund Calculator", TITLE)
-    put(ws, "B2", "Plan today for your children's education tomorrow. Fill in the yellow cells; everything else calculates. "
-        "Results are estimates based on the assumptions you choose — not a guarantee of future costs or investment returns.", MUTED)
-    ws.merge_cells("B2:G2"); ws.row_dimensions[2].height = 30; ws["B2"].alignment = WRAP
-    put(ws, "B3", "Legend:", BOLD); put(ws, "C3", "Your input", BLUE, INPUT_FILL, border=True)
-    put(ws, "D3", "Calculated", fill=CALC_FILL, border=True)
-    for col, w in zip("ABCDEFG", [2, 46, 22, 22, 22, 22, 50]):
-        ws.column_dimensions[col].width = w
-    put(ws, "B5", "Family details and assumptions", H2)
-    put(ws, "C5", "Your input", BOLD); put(ws, "D5", "Value used", BOLD); put(ws, "E5", "Check", BOLD)
-    fam = [
-        (6, "Number of children (1–4)", 2, None, "=IF(C6=\"\",1,C6)", "NumChildren", "0", "LST_N"),
-        (7, "Parent or family label (optional)", "Example family", None, "=C7", None, None, None),
-        (8, "Current country of residence", "Qatar", None, "=C8", None, None, None),
-        (9, "Planned country of education", "Pakistan", None, '=IF(C9="","Pakistan",C9)', "FamCountry", None, "LST_Country"),
-        (10, "Preferred reporting currency (blank = education country's currency)", None, None,
-         '=IF(C10="",INDEX(CO_Ccy,MATCH(FamCountry,CO_Name,0)),C10)', "RepCcy", None, "LST_Ccy"),
-        (11, "Expected age at the start of college (default 18)", 18, None, '=IF(C11="",DefEntryAge,C11)', "FamEntryAge", "0", None),
-        (12, "Expected annual investment return (blank = default for reporting currency)", None, None,
-         '=IF(C12="",INDEX(RT_Ret,MATCH(RepCcy,RT_Ccy,0)),C12)', "RetRate", PCT, None),
-        (13, "Expected tuition inflation (blank = default for education country)", None, None,
-         '=IF(C13="",INDEX(CO_TuiInf,MATCH(FamCountry,CO_Name,0)),C13)', "TuiInf", PCT, None),
-        (14, "Expected living-cost inflation (blank = default)", None, None,
-         '=IF(C14="",INDEX(CO_LivInf,MATCH(FamCountry,CO_Name,0)),C14)', "LivInf", PCT, None),
-        (15, "Expected annual increase in parent contributions", None, None, '=IF(C15="",DefEsc,C15)', "Esc", PCT, None),
-        (16, "Contingency allowance", None, None, '=IF(C16="",DefCont,C16)', "Cont", PCT, None),
-        (17, "Annual exchange-rate drift (your currency vs fee currency)", None, None, '=IF(C17="",DefFxDrift,C17)', "FxDrift", PCT, None),
-        (18, "Contribution timing: Monthly or Annual", "Monthly", None, '=IF(C18="","Monthly",C18)', "ContribMode", None, "LST_Mode"),
-    ]
-    for r, lab, val, _, eff, nm, fmt, lst in fam:
-        put(ws, f"B{r}", lab, wrap=True)
-        put(ws, f"C{r}", val, BLUE, INPUT_FILL, fmt, lock=False, border=True)
-        put(ws, f"D{r}", eff, fill=CALC_FILL, fmt=fmt, border=True)
-        if nm:
-            name(wb, nm, S, f"$D${r}")
-    put(ws, "E12", '=IF(OR(RetRate<=-0.99,RetRate>0.5),"Return must be between -99% and 50%","OK")')
-    for r, nmx in [(13, "TuiInf"), (14, "LivInf"), (15, "Esc"), (17, "FxDrift")]:
-        put(ws, f"E{r}", f'=IF(OR({nmx}<=-0.5,{nmx}>0.5),"Must be between -50% and 50%","OK")')
-    put(ws, "E16", '=IF(OR(Cont<0,Cont>1),"Must be between 0% and 100%","OK")')
-    put(ws, "B19", "Scholarships and other funding are entered for each child below. Investment returns are assumptions, "
-        "not guarantees; zero or negative returns are allowed.", MUTED)
-    ws.merge_cells("B19:G19")
-    name(wb, "AssumptionsValid", S, "$E$20")
-    put(ws, "E20", '=AND(E12="OK",E13="OK",E14="OK",E15="OK",E16="OK",E17="OK")')
-    put(ws, "D20", "Assumptions valid?", MUTED)
-
-    put(ws, "B22", "Children", H2)
-    for k in range(KIDS):
-        col = L(3 + k)
-        put(ws, f"{col}22", f"Child {k+1}", HDR, HDR_FILL, border=True)
-        put(ws, f"{col}23", f'=IF({k+1}<=NumChildren,"Active","Not used")', fill=CALC_FILL, border=True)
-    put(ws, "B23", "Status")
-    child_rows = [
-        (24, "Child's name", ["Child 1", "Child 2", "Child 3", "Child 4"], None, None),
-        (25, "Current age (whole years)", [10, 6, 3, 1], "0", None),
-        (26, "Current school class or grade", ["Grade 5", "Grade 1", "", ""], None, None),
-        (27, "Expected college-entry age (blank = family setting)", [None] * 4, "0", None),
-        (28, "Intended education country (blank = family selection)", [None] * 4, None, "LST_Country"),
-        (29, "Student category (blank = country default)", [None] * 4, None, "LST_Cat"),
-        (30, "Preferred qualification", ["Computer Science", "Medicine — MBBS/MD", "Business Administration", "Accounting and Finance"],
-         None, "LST_Qual"),
-        (31, "Custom qualification name (if 'Other / Custom')", [None] * 4, None, None),
-        (32, "Specialisation (optional)", [None] * 4, None, None),
-        (33, "University (blank or 'University average' = average)", ["University average"] * 4, None, "LST_Uni"),
-        (34, "Course duration in years (blank = default)", [None] * 4, "0.0", None),
-        (35, "Existing education savings (reporting currency)", [500000, 100000, 0, 0], NUM, None),
-        (36, "Existing monthly contribution", [10000, 5000, 0, 0], NUM, None),
-        (37, "Existing annual contribution", [0, 0, 0, 0], NUM, None),
-        (38, "Planned scholarship: % of tuition", [0, 0, 0, 0], PCT, None),
-        (39, "Planned scholarship: fixed amount per study year (reporting currency)", [0, 0, 0, 0], NUM, None),
-        (40, "Other education funding at college start (reporting currency)", [0, 0, 0, 0], NUM, None),
-    ]
-    over = [(42, "tuition", "Tuition per year"), (43, "otherMandatoryAnnual", "Other mandatory fees per year"),
-            (44, "accommodation", "Accommodation per year"), (45, "food", "Food per year"), (46, "transport", "Transport per year"),
-            (47, "healthInsurance", "Health insurance per year"), (48, "books", "Books and equipment per year"),
-            (49, "personal", "Personal and other living per year"), (50, "combinedLiving", "Living costs (combined) per year"),
-            (51, "oneTimeAdmission", "One-time admission fees"), (52, "visaApplication", "Visa and application costs"),
-            (53, "travelRelocation", "Initial travel and relocation"), (54, "otherOneTime", "Other one-time costs")]
-    for r, lab, vals, fmt, lst in child_rows:
-        put(ws, f"B{r}", lab, wrap=True)
-        for k in range(KIDS):
-            put(ws, f"{L(3+k)}{r}", vals[k] if vals[k] != "" else None, BLUE, INPUT_FILL, fmt, lock=False, border=True)
-        if lst:
-            dv = DataValidation(type="list", formula1="=" + lst, allow_blank=True)
-            ws.add_data_validation(dv); dv.add(f"C{r}:F{r}")
-    put(ws, "B41", "Optional cost overrides — in the fee currency shown on 'Education Cost Forecast'. Leave blank to use the "
-        "researched benchmark. Anything typed here is a USER OVERRIDE, not a verified university fee.", H2, wrap=True)
-    ws.merge_cells("B41:G41"); ws.row_dimensions[41].height = 34
-    for r, key, lab in over:
-        put(ws, f"B{r}", lab)
-        for k in range(KIDS):
-            put(ws, f"{L(3+k)}{r}", None, BLUE, INPUT_FILL, NUM, lock=False, border=True)
-    put(ws, "G25", "Ages are whole years. If the college-entry age is not after the current age, costs start now and "
-        "an up-front lump sum may be needed.", MUTED, wrap=True)
-    put(ws, "G30", data["professionalQualificationNote"], MUTED, wrap=True)
-    put(ws, "G33", "Pick a named university only if it appears in the database for the same country, qualification and category; "
-        "otherwise the average is used and a note is shown on the forecast sheet.", MUTED, wrap=True)
-    # drop-downs for family cells
-    for ref, lst in [("C9", "LST_Country"), ("C10", "LST_Ccy"), ("C18", "LST_Mode")]:
-        dv = DataValidation(type="list", formula1="=" + lst, allow_blank=True); ws.add_data_validation(dv); dv.add(ref)
-    dv = DataValidation(type="whole", operator="between", formula1="1", formula2="4", showErrorMessage=True,
-                        error="Choose 1, 2, 3 or 4", errorTitle="Number of children")
-    ws.add_data_validation(dv); dv.add("C6")
-    dvn = DataValidation(type="list", formula1='"1,2,3,4"', allow_blank=False); ws.add_data_validation(dvn); dvn.add("C6")
-    ws.data_validations.dataValidation.remove(dv)
-    for ref in ["C25:F25", "C27:F27", "C11"]:
-        dva = DataValidation(type="whole", operator="between", formula1="0", formula2="45", showErrorMessage=True,
-                             error="Enter a whole number of years (0–45)")
-        ws.add_data_validation(dva); dva.add(ref)
-    dvp = DataValidation(type="decimal", operator="between", formula1="0", formula2="1", showErrorMessage=True,
-                         error="Enter a percentage from 0% to 100%")
-    ws.add_data_validation(dvp); dvp.add("C38:F38")
-    grey = PatternFill("solid", fgColor="E6E6E6")
-    ws.conditional_formatting.add("C24:F54", FormulaRule(formula=['C$23="Not used"'], fill=grey, font=Font(color="A0A0A0")))
-    ws.freeze_panes = "C5"
-
-    # ------------------------------------------------------------------ Education Cost Forecast
-    S = ws_fc.title
-    ws = ws_fc
-    PI = q("Parent Inputs")
-    put(ws, "A1", "Education Cost Forecast", TITLE)
-    put(ws, "A2", "Future Cost = Current Cost × (1 + inflation)^(years from the fee year). Tuition and other fees use tuition "
-        "inflation; living costs, visa and travel use living-cost inflation. Costs are only forecast for study years.", MUTED)
-    ws.column_dimensions["A"].width = 40
-    for k in range(KIDS):
-        ws.column_dimensions[L(3 + k)].width = 24
-    ws.column_dimensions["B"].width = 4
-    put(ws, "A4", "Cost basis per child", H2)
-    for k in range(KIDS):
-        put(ws, f"{L(3+k)}4", f"Child {k+1}", HDR, HDR_FILL, border=True)
-    basis = {}
-
-    def brow(r, label, formula_fn, fmt=None, nm=None):
-        put(ws, f"A{r}", label)
-        for k in range(KIDS):
-            col = L(3 + k)
-            ic = L(3 + k)  # same column letter on Parent Inputs
-            put(ws, f"{col}{r}", formula_fn(col, ic, k), fill=CALC_FILL, fmt=fmt, border=True)
-        if nm:
-            basis[nm] = r
-
-    R = {}
-    rows_def = [
-        ("active", "Active (1 = yes)", lambda c, i, k: f"=IF({k+1}<=NumChildren,1,0)", "0"),
-        ("name", "Name", lambda c, i, k: f'=IF({PI}!{i}24="","Child {k+1}",{PI}!{i}24)', None),
-        ("age", "Current age", lambda c, i, k: f'=IF({PI}!{i}25="","",{PI}!{i}25)', "0"),
-        ("entry", "College-entry age", lambda c, i, k: f'=IF({PI}!{i}27="",FamEntryAge,{PI}!{i}27)', "0"),
-        ("country", "Education country", lambda c, i, k: f'=IF({PI}!{i}28="",FamCountry,{PI}!{i}28)', None),
-        ("cat", "Student category", None, None),
-        ("qual", "Qualification", lambda c, i, k: f'=IF({PI}!{i}30="","",IF(AND({PI}!{i}30="Other / Custom Qualification",{PI}!{i}31<>""),'
-         f'{PI}!{i}30&": "&{PI}!{i}31,{PI}!{i}30))', None),
-        ("bench", "Benchmark chosen", lambda c, i, k: f'=IF(OR({PI}!{i}33="",{PI}!{i}33="University average"),"University average",{PI}!{i}33)', None),
-    ]
+    # ---------------- Cost Database (one row per country | qualification | fee status) ----------------
+    ws = ws_db
+    put(ws, "A1", "Cost database - university fees by country, qualification and fee status", TITLE)
+    put(ws, "A2", "Published fees are averaged live from the Fee Records sheet. The columns below hold planning estimates "
+                  "(used only where no published fee exists), pre-stage fees and course lengths. Read-only; edit "
+                  "data/education/education-costs.json and rebuild instead.", MUTED, wrap=True)
+    ws.merge_cells("A2:N2")
+    ws.row_dimensions[2].height = 30
+    cols = ["Key", "Country", "Qualification", "Fee status", "Education currency", "Course length (years)", "Offered (1/0)",
+            "Pre-stage years", "Pre-stage qualification", "Default fee increase", "Published records", "Records currency",
+            "Estimate status", "Estimate currency", "Estimate base year", "Estimate tuition", "Estimate other fees", "Estimate admission",
+            "Pre-stage status", "Pre-stage currency", "Pre-stage base year", "Pre-stage tuition", "Pre-stage other fees", "Pre-stage admission",
+            "Basis / note"]
+    header_row(ws, 4, 1, cols, [34, 11, 26, 12, 10, 10, 9, 9, 22, 10, 9, 9, 10, 9, 9, 13, 13, 13, 10, 9, 9, 13, 13, 13, 70])
+    rec_rows = []
     r = 5
-    for key, lab, fn, fmt in rows_def:
-        R[key] = r
-        r += 1
-    # write them now that rows are known
-    for key, lab, fn, fmt in rows_def:
-        if key == "cat":
-            fn = lambda c, i, k: (f'=IF({PI}!{i}29="",IFERROR(INDEX(CO_Cat,MATCH({c}{R["country"]},CO_Name,0)),""),{PI}!{i}29)')
-        brow(R[key], lab, fn, fmt)
-    # qualification key for lookups uses the dropdown value (custom label is display only)
-    more = [
-        ("qkey", "Qualification (lookup value)", lambda c, i, k: f'={PI}!{i}30', None),
-        ("rec", "Matched database row (0 = none)", lambda c, i, k: f'=IF({c}{R["bench"]}="University average",0,'
-         f'IFERROR(MATCH({c}{R["country"]}&"|"&{c}{{qkey}}&"|"&{c}{R["cat"]}&"|"&{c}{R["bench"]},EC_Key,0),0))', "0"),
-        ("avg", "Matched average row (0 = none)", lambda c, i, k: f'=IFERROR(MATCH({c}{R["country"]}&"|"&{c}{{qkey}}&"|"&{c}{R["cat"]},AV_Key,0),0)', "0"),
-        ("avgok", "Average available (1 = yes)", lambda c, i, k: f'=IF({c}{{avg}}=0,0,IF(INDEX(AV_Count,{c}{{avg}})>0,1,0))', "0"),
-        ("ccy", "Fee currency", lambda c, i, k: f'=IF({c}{{rec}}>0,INDEX(EC_Ccy,{c}{{rec}}),IF({c}{{avgok}}=1,INDEX(AV_Ccy,{c}{{avg}}),'
-         f'IFERROR(INDEX(CO_Ccy,MATCH({c}{R["country"]},CO_Name,0)),"USD")))', None),
-        ("fys", "Fee year start", lambda c, i, k: f'=IF({c}{{rec}}>0,INDEX(EC_FYS,{c}{{rec}}),IF({c}{{avgok}}=1,INDEX(AV_FYS,{c}{{avg}}),PlanStartYear))', "0"),
-        ("label", "Benchmark used", lambda c, i, k: f'=IF({c}{{rec}}>0,INDEX(EC_Uni,{c}{{rec}}),IF({c}{{avgok}}=1,INDEX(AV_Label,{c}{{avg}}),'
-         f'"No verified fee record — enter your own estimate"))', None),
-        ("note", "Note", lambda c, i, k: f'=IF(AND({c}{R["bench"]}<>"University average",{c}{{rec}}=0),"Chosen university has no record '
-         f'for this country/qualification/category — average used",IF(AND({c}{{rec}}=0,{c}{{avgok}}=0,{PI}!{i}42=""),"No fee data: '
-         f'enter tuition as an override",""))', None),
-        ("lrow", "Living benchmark row", lambda c, i, k: f'=IFERROR(MATCH({c}{R["country"]}&"|"&{c}{R["cat"]},LV_Key,0),IFERROR(MATCH('
-         f'{c}{R["country"]}&"|All",LV_Key,0),IFERROR(MATCH({c}{R["country"]},LV_Country,0),0)))', "0"),
-        ("livrec", "Living costs from the chosen record (1 = yes)", lambda c, i, k: f'=IF({c}{{rec}}=0,0,IF(INDEX(EC_LivRec,{c}{{rec}})="Yes",1,0))', "0"),
-        ("lconv", "Living benchmark → fee currency factor", lambda c, i, k: f'=IF({c}{{lrow}}=0,0,INDEX(FX_Rate,MATCH({c}{{ccy}},FX_Ccy,0))/'
-         f'INDEX(FX_Rate,MATCH(INDEX(LV_Ccy,{c}{{lrow}}),FX_Ccy,0)))', "0.000000"),
-    ]
-    for key, lab, fn, fmt in more:
-        R[key] = r
-        r += 1
-
-    def fill(fstr):
-        return fstr.replace("{qkey}", str(R["qkey"])).replace("{rec}", str(R.get("rec", 0))).replace("{avg}", str(R.get("avg", 0))) \
-            .replace("{avgok}", str(R.get("avgok", 0))).replace("{lrow}", str(R.get("lrow", 0))).replace("{ccy}", str(R.get("ccy", 0)))
-
-    for key, lab, fn, fmt in more:
-        brow(R[key], lab, (lambda f: (lambda c, i, k: fill(f(c, i, k))))(fn), fmt)
-
-    rec_fields = [("tuition", "Tuition per year", 42, "EC_Tuition", "AV_Tuition"),
-                  ("other", "Other mandatory fees per year", 43, "EC_Other", "AV_Other")]
-    for key, lab, pr, ec, av in rec_fields:
-        R[key] = r
-        brow(r, lab + " (fee currency)", lambda c, i, k, pr=pr, ec=ec, av=av:
-             f'=IF({PI}!{i}{pr}<>"",{PI}!{i}{pr},IF({c}{R["rec"]}>0,INDEX({ec},{c}{R["rec"]}),IF({c}{R["avgok"]}=1,INDEX({av},{c}{R["avg"]}),0)))', NUM)
-        r += 1
-    liv_fields = [("acc", "Accommodation", 44, "EC_Acc", "LV_Acc"), ("food", "Food", 45, "EC_Food", "LV_Food"),
-                  ("trans", "Transport", 46, "EC_Trans", "LV_Trans"), ("ins", "Health insurance", 47, "EC_Ins", "LV_Ins"),
-                  ("books", "Books and equipment", 48, "EC_Books", "LV_Books"), ("pers", "Personal and other living", 49, "EC_Personal", "LV_Personal"),
-                  ("comb", "Living (combined)", 50, None, "LV_Comb")]
-    for key, lab, pr, ec, lv in liv_fields:
-        R[key] = r
-        src_rec = f"INDEX({ec},{{c}}{R['rec']})" if ec else "0"
-        brow(r, lab + " per year (fee currency)", lambda c, i, k, pr=pr, lv=lv, src_rec=src_rec:
-             f'=IF({PI}!{i}{pr}<>"",{PI}!{i}{pr},IF({c}{R["livrec"]}=1,{src_rec.replace("{c}", c)},'
-             f'IF({c}{R["lrow"]}>0,INDEX({lv},{c}{R["lrow"]})*{c}{R["lconv"]},0)))', NUM)
-        r += 1
-    one_fields = [("adm", "One-time admission fees", 51, "EC_Adm", "AV_Adm"), ("visa", "Visa and application", 52, None, None),
-                  ("travel", "Initial travel and relocation", 53, None, None), ("oot", "Other one-time costs", 54, "EC_OtherOT", "AV_OtherOT")]
-    for key, lab, pr, ec, av in one_fields:
-        R[key] = r
-        if key == "visa":
-            fn = lambda c, i, k, pr=pr: f'=IF({PI}!{i}{pr}<>"",{PI}!{i}{pr},IF({c}{R["lrow"]}>0,INDEX(LV_Visa,{c}{R["lrow"]})*{c}{R["lconv"]},0))'
-        elif key == "travel":
-            fn = lambda c, i, k, pr=pr: f'=IF({PI}!{i}{pr}<>"",{PI}!{i}{pr},0)'
-        else:
-            fn = lambda c, i, k, pr=pr, ec=ec, av=av: (f'=IF({PI}!{i}{pr}<>"",{PI}!{i}{pr},IF({c}{R["rec"]}>0,INDEX({ec},{c}{R["rec"]}),'
-                                                         f'IF({c}{R["avgok"]}=1,INDEX({av},{c}{R["avg"]}),0)))')
-        brow(r, lab + " (fee currency)", fn, NUM)
-        r += 1
-    calc = [
-        ("dur", "Course duration (years)", lambda c, i, k: f'=IF({PI}!{i}34<>"",{PI}!{i}34,IF({c}{R["rec"]}>0,INDEX(EC_Dur,{c}{R["rec"]}),'
-         f'IFERROR(INDEX(CD_Years,MATCH({c}{R["country"]}&"|"&{c}{R["qkey"]},CD_Key,0)),IFERROR(INDEX(CO_Dur,MATCH({c}{R["country"]},CO_Name,0)),4))))', "0.0"),
-        ("livtot", "Total living per year (fee currency)", lambda c, i, k: f'=SUM({c}{R["acc"]}:{c}{R["comb"]})', NUM),
-        ("overrides", "User overrides in use", lambda c, i, k: f'=IF(COUNTA({PI}!{i}42:{i}54)>0,"Yes — "&COUNTA({PI}!{i}42:{i}54)&" value(s) are user overrides","No")', None),
-        ("savings", "Existing savings (reporting currency)", lambda c, i, k: f'=N({PI}!{i}35)', NUM),
-        ("m0", "Existing monthly contribution", lambda c, i, k: f'=N({PI}!{i}36)', NUM),
-        ("a0", "Existing annual contribution", lambda c, i, k: f'=N({PI}!{i}37)', NUM),
-        ("schpct", "Scholarship % of tuition", lambda c, i, k: f'=N({PI}!{i}38)', PCT),
-        ("schfix", "Scholarship fixed per study year", lambda c, i, k: f'=N({PI}!{i}39)', NUM),
-        ("of", "Other funding at college start", lambda c, i, k: f'=N({PI}!{i}40)', NUM),
-    ]
-    for key, lab, fn, fmt in calc:
-        R[key] = r
-        brow(r, lab, fn, fmt)
-        r += 1
-    calc2 = [
-        ("valid", "Inputs valid (1 = yes)", lambda c, i, k: (
-            f'=IF(AND(ISNUMBER({c}{R["age"]}),ISNUMBER({c}{R["entry"]}),ISNUMBER({c}{R["dur"]}),{c}{R["qkey"]}<>""),'
-            f'IF(AND({c}{R["age"]}>=0,{c}{R["age"]}<=40,INT({c}{R["age"]})={c}{R["age"]},{c}{R["entry"]}>=14,{c}{R["entry"]}<=45,'
-            f'INT({c}{R["entry"]})={c}{R["entry"]},{c}{R["dur"]}>=0,{c}{R["dur"]}<=10,{c}{R["schpct"]}>=0,{c}{R["schpct"]}<=1,'
-            f'{c}{R["savings"]}>=0,{c}{R["m0"]}>=0,{c}{R["a0"]}>=0,{c}{R["schfix"]}>=0,{c}{R["of"]}>=0,AssumptionsValid),1,0),0)'), "0"),
-        ("inc", "Included in results (active and valid)", lambda c, i, k: f'={c}{R["active"]}*{c}{R["valid"]}', "0"),
-        ("msg", "Validation message", lambda c, i, k: f'=IF({c}{R["active"]}=0,"Not used",IF({c}{R["valid"]}=1,"OK",'
-         f'"Check age (0–40), entry age (14–45), duration (0–10), qualification, amounts and assumptions"))', None),
-        ("n", "Years until college", lambda c, i, k: f'=IF({c}{R["inc"]}=1,MAX(0,{c}{R["entry"]}-{c}{R["age"]}),0)', "0"),
-        ("edu", "Study years modelled (rounded up)", lambda c, i, k: f'=IF({c}{R["inc"]}=1,ROUNDUP({c}{R["dur"]},0),0)', "0"),
-        ("H", "Plan years with costs", lambda c, i, k: f'={c}{R["n"]}+{c}{R["edu"]}', "0"),
-        ("Hr", "Plan rows used", lambda c, i, k: f'=MAX({c}{R["H"]},1)', "0"),
-        ("P", "Contribution years that can still help", lambda c, i, k: f'=MAX(0,{c}{R["H"]}-1)', "0"),
-        ("off", "Fee-year offset (plan start − fee year)", lambda c, i, k: f'=PlanStartYear-{c}{R["fys"]}', "0"),
-        ("fx0", "Fee → reporting currency rate", lambda c, i, k: f'=INDEX(FX_Rate,MATCH(RepCcy,FX_Ccy,0))/INDEX(FX_Rate,MATCH({c}{R["ccy"]},FX_Ccy,0))', "0.000000"),
-        ("immediate", "College age already reached?", lambda c, i, k: f'=IF(AND({c}{R["inc"]}=1,{c}{R["entry"]}<={c}{R["age"]}),"Yes — costs start now","No")', None),
-    ]
-    for key, lab, fn, fmt in calc2:
-        R[key] = r
-        brow(r, lab, fn, fmt)
-        r += 1
-    basis_end = r - 1
-    ws.conditional_formatting.add(f"C5:F{basis_end}", FormulaRule(formula=['C$5=0'], fill=grey, font=Font(color="A0A0A0")))
-
-    # yearly forecast tables
-    FC_START = basis_end + 4
-    BLOCK = ROWS + 4
-    fc_cols = ["Plan year", "Row active", "Age at start", "Academic year starting", "Study year #", "Fraction of year studied",
-               "Exponent (years from fee year)", "Tuition inflation index", "Living inflation index",
-               "Tuition (fee ccy)", "Other mandatory fees", "Accommodation", "Food", "Transport", "Health insurance", "Books",
-               "Personal & other living", "Living (combined)", "One-time costs", "Gross cost (fee ccy)", "Contingency",
-               "Scholarship % part (fee ccy)", "Exchange rate (fee → reporting)", "Cost incl. contingency (reporting)",
-               "Scholarships & grants (reporting)", "NET EDUCATION EXPENSE (reporting)", "Tuition & fees (reporting)",
-               "Living (reporting)", "One-time & contingency (reporting)"]
-    fc_rows = {}
-    for k in range(KIDS):
-        c = L(3 + k)  # basis column for this child
-        top = FC_START + k * BLOCK
-        put(ws, f"A{top}", f'="Child {k+1}: "&{c}{R["name"]}&" — costs by plan year (fee currency: "&{c}{R["ccy"]}&", reporting: "&RepCcy&")"', H2)
-        header_row(ws, top + 1, 1, fc_cols)
-        ws.row_dimensions[top + 1].height = 54
-        first = top + 2
-        fc_rows[k] = first
-        B = lambda key: f"${c}${R[key]}"
-        for p in range(1, ROWS + 1):
-            rr = first + p - 1
-            f = {
-                "A": p,
-                "B": f"=IF(AND(A{rr}<={B('Hr')},{B('inc')}=1),1,0)",
-                "C": f"=IF(B{rr}=1,{B('age')}+A{rr}-1,\"\")",
-                "D": f'=(PlanStartYear+A{rr}-1)&"/"&RIGHT(PlanStartYear+A{rr},2)',
-                "E": f"=A{rr}-1-{B('n')}",
-                "F": f"=IF(AND(B{rr}=1,E{rr}>=0,E{rr}<{B('edu')}),MIN(1,{B('dur')}-E{rr}),0)",
-                "G": f"=(A{rr}-1)+{B('off')}",
-                "H": f"=(1+TuiInf)^G{rr}",
-                "I": f"=(1+LivInf)^G{rr}",
-                "J": f"={B('tuition')}*H{rr}*F{rr}",
-                "K": f"={B('other')}*H{rr}*F{rr}",
-                "L": f"={B('acc')}*I{rr}*F{rr}",
-                "M": f"={B('food')}*I{rr}*F{rr}",
-                "N": f"={B('trans')}*I{rr}*F{rr}",
-                "O": f"={B('ins')}*I{rr}*F{rr}",
-                "P": f"={B('books')}*I{rr}*F{rr}",
-                "Q": f"={B('pers')}*I{rr}*F{rr}",
-                "R": f"={B('comb')}*I{rr}*F{rr}",
-                "S": f"=IF(AND(F{rr}>0,E{rr}=0),({B('adm')}+{B('oot')})*H{rr}+({B('visa')}+{B('travel')})*I{rr},0)",
-                "T": f"=SUM(J{rr}:S{rr})",
-                "U": f"=T{rr}*Cont",
-                "V": f"=MIN(J{rr},J{rr}*{B('schpct')})",
-                "W": f"={B('fx0')}*(1+FxDrift)^(A{rr}-1)",
-                "X": f"=(T{rr}+U{rr})*W{rr}",
-                "Y": f"=IF(B{rr}=1,MIN(X{rr},V{rr}*W{rr}+IF(F{rr}>0,{B('schfix')}*F{rr},0)),0)",
-                "Z": f"=IF(B{rr}=1,MAX(0,X{rr}-(V{rr}*W{rr}+IF(F{rr}>0,{B('schfix')}*F{rr},0))),0)",
-                "AA": f"=IF(B{rr}=1,(J{rr}+K{rr})*W{rr},0)",
-                "AB": f"=IF(B{rr}=1,SUM(L{rr}:R{rr})*W{rr},0)",
-                "AC": f"=IF(B{rr}=1,(S{rr}+U{rr})*W{rr},0)",
-            }
-            for col, val in f.items():
-                fmt = NUM
-                if col in ("A", "B", "C", "E", "G"):
-                    fmt = "0"
-                elif col == "F":
-                    fmt = "0.00"
-                elif col in ("H", "I", "W"):
-                    fmt = "0.0000"
-                cell = put(ws, f"{col}{rr}", val, fmt=fmt)
-                if col == "Z":
-                    cell.font = BOLD
-        ws.conditional_formatting.add(f"A{first}:AC{first+ROWS-1}", FormulaRule(formula=[f"$B{first}=0"], font=Font(color="BFBFBF")))
-    for col in range(1, 30):
-        if col > 2:
-            ws.column_dimensions[L(col)].width = max(ws.column_dimensions[L(col)].width or 0, 13)
-    ws.column_dimensions["A"].width = 40
+    for c in d["countries"]:
+        for qn in quals:
+            for fs in ("domestic", "international"):
+                key = c["name"] + "|" + qn + "|" + fs
+                dur = R.duration(c["name"], qn)
+                trate = R.tuition_inflation(c["name"], qn, fs)
+                rccy, same = R.used_records(c["name"], qn, fs)
+                est = R.estimate(c["name"], qn, fs) if not same else None
+                pre = dur["preStage"]
+                pb = R.bench(c["name"], pre["qualification"], fs, R.tuition_inflation(c["name"], pre["qualification"], fs)) if pre else None
+                row = [key, c["name"], qn, fs, c["currency"], dur["years"] if isnum(dur["years"]) else 0, 1 if dur["available"] else 0,
+                       pre["years"] if pre else 0, pre["qualification"] if pre else "", trate, len(same), rccy or "",
+                       est["status"] if est else "", est["currency"] if est else "", est["baseYear"] if est else "",
+                       est["tuition"] if est else 0, est["otherFees"] if est else 0, est["admission"] if est else 0,
+                       pb["status"] if pb else "", pb["currency"] if pb else "", pb["baseYear"] if pb else "",
+                       pb["tuition"] if pb else 0, pb["otherFees"] if pb else 0, pb["admission"] if pb else 0,
+                       (est["note"] if est else ("Published fees from %d record(s)." % len(same))) + ((" " + dur["note"]) if dur.get("note") else "")]
+                for j, v in enumerate(row):
+                    cell = ws.cell(row=r, column=1 + j, value=v)
+                    cell.font = font(size=9)
+                    if j in (5,):
+                        cell.number_format = "0.0"
+                    if j == 9:
+                        cell.number_format = PCT
+                    if j in (15, 16, 17, 21, 22, 23):
+                        cell.number_format = NUM
+                for rec in same:
+                    rec_rows.append((key, rec))
+                r += 1
+    db_last = r - 1
+    for nm, col in [("DB_Key", "A"), ("DB_EduCcy", "E"), ("DB_Dur", "F"), ("DB_Avail", "G"), ("DB_PreYears", "H"), ("DB_TInf", "J"),
+                    ("DB_RecCcy", "L"), ("DB_EstStatus", "M"), ("DB_EstCcy", "N"), ("DB_EstBase", "O"), ("DB_EstTuition", "P"),
+                    ("DB_EstOther", "Q"), ("DB_EstAdm", "R"), ("DB_PreStatus", "S"), ("DB_PreCcy", "T"), ("DB_PreBase", "U"),
+                    ("DB_PreTuition", "V"), ("DB_PreOther", "W"), ("DB_PreAdm", "X")]:
+        name(nm, S_DB, f"${col}$5:${col}${db_last}")
     ws.freeze_panes = "B5"
 
-    # ------------------------------------------------------------------ Savings Calculator
-    S = ws_sv.title
-    ws = ws_sv
-    FC = q("Education Cost Forecast")
-    put(ws, "A1", "Savings Calculator", TITLE)
-    put(ws, "A2", "Year-by-year cash-flow model per child. Costs are paid at the start of each plan year; monthly contributions "
-        "at month-ends (annual contributions at year-end); returns apply to the balance left after costs. The required "
-        "contribution is the smallest first-year amount, rising each year by the escalation rate, that keeps every child's fund "
-        "at or above zero. If costs start before contributions can help, an up-front lump sum is shown instead.", MUTED, wrap=True)
-    ws.merge_cells("A2:H2"); ws.row_dimensions[2].height = 54
-    ws.column_dimensions["A"].width = 46
-    for k in range(KIDS + 1):
-        ws.column_dimensions[L(3 + k)].width = 20
-    ws.column_dimensions["B"].width = 4
-    put(ws, "A4", '="Summary — amounts in "&RepCcy', H2)
-    for k in range(KIDS):
-        put(ws, f"{L(3+k)}4", f"={FC}!{L(3+k)}{R['name']}", HDR, HDR_FILL, border=True)
-    put(ws, "G4", "Family total", HDR, HDR_FILL, border=True)
-
-    SV_START = 40
-    sv_cols = ["Plan year", "Row active", "Education expense", "Other funding received", "Contribution year", "Escalation factor",
-               "Existing contributions (year-end value)", "Unit additional contribution", "Available after costs (existing plan, linear)",
-               "Linear closing balance", "Unit stream available", "Unit stream closing", "Lump growth factor", "Lump-sum test",
-               "Required-contribution test", "Required plan: opening balance", "Required plan: additional contribution",
-               "Required plan: closing balance", "Current plan: opening balance", "Current plan: available after costs",
-               "Current plan: SHORTFALL", "Current plan: closing balance", "Existing contributions valued at college start",
-               "Required plan: balance after paying costs"]
-    sv_first = {}
-    for k in range(KIDS):
-        c = L(3 + k)
-        B = lambda key: f"{FC}!${c}${R[key]}"
-        top = SV_START + k * BLOCK
-        put(ws, f"A{top}", f'="Child {k+1}: "&{B("name")}&" — annual cash flow ("&RepCcy&")"', H2)
-        header_row(ws, top + 1, 1, sv_cols)
-        ws.row_dimensions[top + 1].height = 66
-        first = top + 2
-        sv_first[k] = first
-        fcr = fc_rows[k]
-        for p in range(1, ROWS + 1):
-            rr = first + p - 1
-            fr = fcr + p - 1
-            prev = rr - 1
-            f = {
-                "A": p,
-                "B": f"={FC}!B{fr}",
-                "C": f"={FC}!Z{fr}",
-                "D": f"=IF(AND(B{rr}=1,{FC}!F{fr}>0,{FC}!E{fr}=0),{B('of')},0)",
-                "E": f"=IF(AND(B{rr}=1,A{rr}<={B('P')}),1,0)",
-                "F": f"=(1+Esc)^(A{rr}-1)",
-                "G": f"=E{rr}*({B('m0')}*12*MonthlyFactor+{B('a0')})*F{rr}",
-                "H": f"=E{rr}*UnitFactor*F{rr}",
-                "I": (f"={B('savings')}*{B('inc')}+D{rr}-C{rr}" if p == 1 else f"=J{prev}+D{rr}-C{rr}"),
-                "J": (f"=IF(B{rr}=1,I{rr}*(1+RetRate)+G{rr},{B('savings')}*{B('inc')})" if p == 1 else f"=IF(B{rr}=1,I{rr}*(1+RetRate)+G{rr},J{prev})"),
-                "K": ("=0" if p == 1 else f"=L{prev}"),
-                "L": (f"=IF(B{rr}=1,K{rr}*(1+RetRate)+H{rr},0)" if p == 1 else f"=IF(B{rr}=1,K{rr}*(1+RetRate)+H{rr},L{prev})"),
-                "M": f"=(1+RetRate)^(A{rr}-1)",
-                "N": f"=IF(AND(B{rr}=1,C{rr}>0,K{rr}<=0.000000000001,I{rr}<0),-I{rr}/M{rr},0)",
-                "O": f"=IF(AND(B{rr}=1,C{rr}>0,K{rr}>0.000000000001),-(I{rr}+$C${{LUMP}}*M{rr})/K{rr},0)",
-                "P": (f"={B('savings')}*{B('inc')}+$C${{LUMP}}" if p == 1 else f"=R{prev}"),
-                "Q": f"=H{rr}*$C${{X}}",
-                "R": f"=IF(B{rr}=1,(P{rr}+D{rr}-C{rr})*(1+RetRate)+G{rr}+Q{rr},P{rr})",
-                "S": (f"={B('savings')}*{B('inc')}" if p == 1 else f"=V{prev}"),
-                "T": f"=S{rr}+D{rr}-C{rr}",
-                "U": f"=IF(B{rr}=1,MAX(0,-T{rr}),0)",
-                "V": f"=IF(B{rr}=1,MAX(0,T{rr})*(1+RetRate)+G{rr},S{rr})",
-                "W": f"=IF(A{rr}<=MIN({B('n')},{B('P')}),G{rr}*(1+RetRate)^({B('n')}-A{rr}),0)",
-                "X": f"=IF(B{rr}=1,P{rr}+D{rr}-C{rr},0)",
-            }
-            for col, val in f.items():
-                put(ws, f"{col}{rr}", val, fmt="0" if col in ("A", "B", "E") else ("0.0000" if col in ("F", "M") else NUM))
-        ws.conditional_formatting.add(f"A{first}:X{first+ROWS-1}", FormulaRule(formula=[f"$B{first}=0"], font=Font(color="BFBFBF")))
-        ws.conditional_formatting.add(f"U{first}:U{first+ROWS-1}", FormulaRule(formula=[f"U{first}>0.5"], font=Font(color="A61E2A", bold=True)))
-    for col in range(8, 25):
-        ws.column_dimensions[L(col)].width = 15
-
-    # summary rows (rows 5..)
-    summ = [
-        ("n", "Years remaining until college", lambda c, k, f, l: f"={FC}!{c}{R['n']}", "0"),
-        ("start", "Estimated education cost in the first study year", lambda c, k, f, l: f"=IF({FC}!{c}{R['inc']}=1,INDEX(C{f}:C{l},{FC}!{c}{R['n']}+1),0)", NUM),
-        ("total", "Total nominal education cost across the course", lambda c, k, f, l: f"=SUM(C{f}:C{l})", NUM),
-        ("tui", "  of which tuition and fees", lambda c, k, f, l: f"=SUM({FC}!AA{fc_rows[k]}:AA{fc_rows[k]+ROWS-1})", NUM),
-        ("liv", "  of which living costs", lambda c, k, f, l: f"=SUM({FC}!AB{fc_rows[k]}:AB{fc_rows[k]+ROWS-1})", NUM),
-        ("oth", "  of which one-time costs and contingency", lambda c, k, f, l: f"=SUM({FC}!AC{fc_rows[k]}:AC{fc_rows[k]+ROWS-1})", NUM),
-        ("sch", "Scholarships and grants applied", lambda c, k, f, l: f"=SUM({FC}!Y{fc_rows[k]}:Y{fc_rows[k]+ROWS-1})", NUM),
-        ("fvs", "Future value of existing savings at college start", lambda c, k, f, l: f"={FC}!{c}{R['savings']}*(1+RetRate)^{FC}!{c}{R['n']}*{FC}!{c}{R['inc']}", NUM),
-        ("fvc", "Projected value of existing contributions at college start", lambda c, k, f, l: f"=SUM(W{f}:W{l})", NUM),
-        ("LUMP", "Up-front lump sum needed now (costs start before contributions can help)", lambda c, k, f, l: f"=MAX(0,MAX(N{f}:N{l}))", NUM),
-        ("X", "REQUIRED ADDITIONAL CONTRIBUTION — first-year annual total", lambda c, k, f, l: f"=IF(MAX(O{f}:O{l})<0.000000001,0,MAX(O{f}:O{l}))", NUM),
-        ("XM", "REQUIRED ADDITIONAL CONTRIBUTION — per month in year 1", lambda c, k, f, l: f'=IF(ContribMode="Annual","n/a (annual mode)",{c}{{X}}/12)', NUM),
-        ("tot_m", "Total monthly saving in year 1 (existing + additional)", lambda c, k, f, l: f'=IF(ContribMode="Annual","n/a (annual mode)",({FC}!{c}{R["m0"]}+{FC}!{c}{R["a0"]}/12)*{FC}!{c}{R["inc"]}+{c}{{X}}/12)', NUM),
-        ("short", "Shortfall under the current plan (sum over study years)", lambda c, k, f, l: f"=SUM(U{f}:U{l})", NUM),
-        ("cov", "Funding coverage under the current plan", lambda c, k, f, l: f"=IF({c}{{total}}>0,MAX(0,1-{c}{{short}}/{c}{{total}}),1)", PCT),
-        ("gap", "Projected surplus (+) or funding gap (−) under the current plan", lambda c, k, f, l: f"=IF({c}{{short}}>0,-{c}{{short}},INDEX(V{f}:V{l},{FC}!{c}{R['Hr']}))*{FC}!{c}{R['inc']}", NUM),
-        ("status", "Result", lambda c, k, f, l: f'=IF({FC}!{c}{R["inc"]}=0,{FC}!{c}{R["msg"]},IF({c}{{short}}>0.5,"Funding gap with current savings plan","Current plan covers the estimated costs"))', None),
-    ]
-    SR = {}
-    for i, (key, *_rest) in enumerate(summ):
-        SR[key] = 5 + i
-    for key, lab, fn, fmt in summ:
-        r = SR[key]
-        put(ws, f"A{r}", lab, BOLD if key in ("X", "XM", "gap") else None)
-        for k in range(KIDS):
-            c = L(3 + k)
-            fst, lst = sv_first[k], sv_first[k] + ROWS - 1
-            fstr = fn(c, k, fst, lst)
-            for kk, vv in SR.items():
-                fstr = fstr.replace("{" + kk + "}", str(vv))
-            put(ws, f"{c}{r}", fstr, fmt=fmt, fill=GOLD_FILL if key in ("X", "XM") else CALC_FILL, border=True)
-        if key not in ("n", "status", "cov", "XM", "tot_m"):
-            put(ws, f"G{r}", f"=SUM(C{r}:F{r})", BOLD, fmt=fmt, fill=CALC_FILL, border=True)
-    put(ws, f"G{SR['n']}", "", fill=CALC_FILL, border=True)
-    put(ws, f"G{SR['XM']}", f'=IF(ContribMode="Annual","n/a (annual mode)",G{SR["X"]}/12)', BOLD, fmt=NUM, fill=GOLD_FILL, border=True)
-    put(ws, f"G{SR['tot_m']}", f'=IF(ContribMode="Annual","n/a (annual mode)",SUM(C{SR["tot_m"]}:F{SR["tot_m"]}))', BOLD, fmt=NUM, fill=CALC_FILL, border=True)
-    put(ws, f"G{SR['cov']}", f"=IF(G{SR['total']}>0,MAX(0,1-G{SR['short']}/G{SR['total']}),1)", BOLD, fmt=PCT, fill=CALC_FILL, border=True)
-    put(ws, f"G{SR['gap']}", f"=IF(G{SR['short']}>0,-G{SR['short']},SUM(C{SR['gap']}:F{SR['gap']}))", BOLD, fmt=NUM, fill=CALC_FILL, border=True)
-    put(ws, f"G{SR['status']}", f'=IF(G{SR["short"]}>0.5,"Family funding gap","Family plan covers estimated costs")', BOLD, fill=CALC_FILL, border=True)
-    # substitute LUMP / X anchors inside the per-row formulas
-    for k in range(KIDS):
-        c = L(3 + k)
-        for p in range(ROWS):
-            rr = sv_first[k] + p
-            for col in ("O", "P", "Q"):
-                v = ws[f"{col}{rr}"].value
-                if isinstance(v, str):
-                    ws[f"{col}{rr}"].value = v.replace("$C${LUMP}", f"${c}${SR['LUMP']}").replace("$C${X}", f"${c}${SR['X']}")
-    put(ws, f"A{SR['status']+2}", "Disclosure: actual returns, fees, inflation, currency movements and university fees may differ "
-        "from these assumptions. Investment returns are not guaranteed. This is an educational planning tool.", MUTED, wrap=True)
-    ws.merge_cells(f"A{SR['status']+2}:G{SR['status']+2}")
-    ws.row_dimensions[SR['status'] + 2].height = 30
-
-    # family by plan year (columns AA onwards near top)
-    fy_top = 4
-    put(ws, f"AA{fy_top-1}", '="Family cash flow by plan year ("&RepCcy&")"', H2)
-    header_row(ws, fy_top, 27, ["Plan year", "Academic year starting", "Education expenses", "Existing contributions",
-                                "Additional required contributions", "Total contributions (required plan)",
-                                "Fund balance (required plan)", "Fund balance (current plan)", "Shortfall (current plan)"])
-    ws.row_dimensions[fy_top].height = 54
-    for p in range(1, ROWS + 1):
-        rr = fy_top + p
-        rows = [sv_first[k] + p - 1 for k in range(KIDS)]
-        sm = lambda col: "=" + "+".join(f"{col}{x}" for x in rows)
-        vals = {"AA": p, "AB": f'=(PlanStartYear+AA{rr}-1)&"/"&RIGHT(PlanStartYear+AA{rr},2)', "AC": sm("C"), "AD": sm("G"),
-                "AE": sm("Q"), "AF": f"=AD{rr}+AE{rr}", "AG": sm("R"), "AH": sm("V"), "AI": sm("U")}
-        for col, v in vals.items():
-            put(ws, f"{col}{rr}", v, fmt="0" if col == "AA" else NUM)
-    for col in range(27, 36):
-        ws.column_dimensions[L(col)].width = 15
+    # ---------------- Fee Records (only the records the averages use) ----------------
+    ws = ws_rec
+    put(ws, "A1", "Published fee records used in the averages", TITLE)
+    put(ws, "A2", "Same country, qualification, fee status and currency. Each record is grown to the plan start year with the "
+                  "fee increase before averaging.", MUTED)
+    header_row(ws, 4, 1, ["Key", "University", "Fee year", "Fee year start", "Currency", "Tuition (per year)",
+                          "Other mandatory fees (per year)", "One-time fees", "Status", "Source"],
+               [34, 34, 10, 9, 9, 14, 14, 12, 12, 60])
+    for i, (key, rec) in enumerate(rec_rows):
+        rr = 5 + i
+        vals = [key, rec.get("university", ""), rec.get("feeYear", ""), rec.get("feeYearStart") or d["planStartYear"], rec["currency"],
+                rec["tuition"], num(rec.get("otherMandatoryAnnual")), num(rec.get("oneTimeAdmission")) + num(rec.get("otherOneTime")),
+                rec.get("status", ""), rec.get("sourceUrl", "")]
+        for j, v in enumerate(vals):
+            cell = ws.cell(row=rr, column=1 + j, value=v)
+            cell.font = font(size=9)
+            if j in (5, 6, 7):
+                cell.number_format = NUM
+    rec_last = 4 + len(rec_rows)
+    for nm, col in [("RecKey", "A"), ("RecYear", "D"), ("RecTuition", "F"), ("RecOther", "G"), ("RecAdm", "H")]:
+        name(nm, S_REC, f"${col}$5:${col}${rec_last}")
     ws.freeze_panes = "B5"
-    FY_FIRST = fy_top + 1
 
-    # ------------------------------------------------------------------ Parent Dashboard
-    ws = ws_ds
-    SV = q("Savings Calculator")
-    put(ws, "B1", "Parent Dashboard", TITLE)
-    put(ws, "B2", '="Family: "&\'Parent Inputs\'!D7&"   ·   Education country: "&FamCountry&"   ·   Reporting currency: "&RepCcy'
-        '&"   ·   Exchange rates as of "&FX_Date', MUTED)
+    # ---------------- Living Costs (country | fee status) ----------------
+    ws = ws_liv
+    put(ws, "A1", "Living costs per year (today's prices)", TITLE)
+    put(ws, "A2", d.get("livingNote", ""), MUTED, wrap=True)
+    ws.merge_cells("A2:L2")
+    ws.row_dimensions[2].height = 40
+    hdr = ["Key (country|fee status)"]
+    for k in LIVING_KEYS:
+        lab = next(it[1] for it in ITEMS if it[0] == k)
+        hdr += [lab, lab + " currency", lab + " year", lab + " status"]
+    header_row(ws, 4, 1, hdr, [24] + [12, 8, 7, 10] * len(LIVING_KEYS))
+    r = 5
+    for c in d["countries"]:
+        for fs in ("domestic", "international"):
+            ws.cell(row=r, column=1, value=c["name"] + "|" + fs).font = font(size=9)
+            for j, k in enumerate(LIVING_KEYS):
+                it = R.living_item(c["name"], k, fs)
+                for m, v in enumerate([it["amount"], it["currency"], it["baseYear"], it["status"]]):
+                    cell = ws.cell(row=r, column=2 + j * 4 + m, value=v)
+                    cell.font = font(size=9)
+                    if m == 0:
+                        cell.number_format = NUM
+            r += 1
+    liv_last = r - 1
+    name("LivKey", S_LIV, f"$A$5:$A${liv_last}")
+    for j, k in enumerate(LIVING_KEYS):
+        for m, part in enumerate(["Amt", "Ccy", "Base", "Status"]):
+            name(f"Liv_{k}_{part}", S_LIV, f"${L(2 + j * 4 + m)}$5:${L(2 + j * 4 + m)}${liv_last}")
+
+    # ---------------- Visas and Travel ----------------
+    ws = ws_vt
+    put(ws, "A1", "Student visa (by destination and nationality) and first travel (by destination and country of residence)", TITLE)
+    header_row(ws, 3, 1, ["Key (country|nationality)", "Visa amount", "Currency", "Year", "Status"], [30, 12, 9, 7, 11])
+    header_row(ws, 3, 7, ["Key (country|residence)", "Travel and setting-up", "Currency", "Year", "Status"], [30, 12, 9, 7, 11])
+    r = 4
+    for c in countries:
+        for p in places:
+            v, t = R.visa(c, p), R.travel(c, p)
+            for j, val in enumerate([c + "|" + p, v["amount"], v["currency"], v["baseYear"], v["status"]]):
+                ws.cell(row=r, column=1 + j, value=val).font = font(size=9)
+            for j, val in enumerate([c + "|" + p, t["amount"], t["currency"], t["baseYear"], t["status"]]):
+                ws.cell(row=r, column=7 + j, value=val).font = font(size=9)
+            r += 1
+    vt_last = r - 1
+    for nm, col in [("VisaKey", "A"), ("VisaAmt", "B"), ("VisaCcy", "C"), ("VisaBase", "D"), ("VisaStatus", "E"),
+                    ("TravKey", "G"), ("TravAmt", "H"), ("TravCcy", "I"), ("TravBase", "J"), ("TravStatus", "K")]:
+        name(nm, S_VT, f"${col}$4:${col}${vt_last}")
+    put(ws, "M3", "Visa notes", BOLD)
+    for i, v in enumerate(d.get("visas", [])):
+        put(ws, f"M{4 + i}", v["country"] + ": " + v.get("note", ""), font(size=9), wrap=True)
+    put(ws, f"M{5 + len(d.get('visas', []))}", "Travel: " + d.get("travel", {}).get("note", ""), font(size=9), wrap=True)
+    ws.column_dimensions["M"].width = 90
+
+    # ---------------- Inputs ----------------
+    ws = ws_in
     ws.column_dimensions["A"].width = 2
-    for col, w in zip("BCDEFGH", [44, 20, 20, 20, 20, 20, 4]):
-        ws.column_dimensions[col].width = w
-    kpis = [("Number of children", "=NumChildren", "0"),
-            ("Selected education country", "=FamCountry", None),
-            ("Reporting currency", "=RepCcy", None),
-            ("Combined estimated education cost", f"={SV}!G{SR['total']}", NUM),
-            ("Existing savings today", f"=SUMPRODUCT('Education Cost Forecast'!C{R['savings']}:F{R['savings']},'Education Cost Forecast'!C{R['active']}:F{R['active']})", NUM),
-            ("Projected value of existing savings and contributions at each college start", f"={SV}!G{SR['fvs']}+{SV}!G{SR['fvc']}", NUM),
-            ("Required additional monthly family saving (year 1)", f"={SV}!G{SR['XM']}", NUM),
-            ("Required additional annual family saving (year 1)", f"={SV}!G{SR['X']}", NUM),
-            ("Up-front lump sum needed now (if any)", f"={SV}!G{SR['LUMP']}", NUM),
-            ("Funding coverage with the current plan", f"={SV}!G{SR['cov']}", PCT),
-            ("Projected surplus (+) or shortfall (−) with the current plan", f"={SV}!G{SR['gap']}", NUM)]
-    put(ws, "B4", "Key figures", H2)
-    for i, (lab, f, fmt) in enumerate(kpis):
-        r = 5 + i
-        put(ws, f"B{r}", lab, border=True)
-        put(ws, f"C{r}", f, BOLD, fill=GOLD_FILL if "Required" in lab else CALC_FILL, fmt=fmt, border=True)
-    put(ws, "D7", "Required savings rise each year by the contribution-increase rate. Monthly figures assume end-of-month "
-        "payments; see 'Savings Calculator' for every year.", MUTED, wrap=True)
-    ws.merge_cells("D7:G9")
-    # per-child table for charts
-    put(ws, "B18", "By child", H2)
-    header_row(ws, 19, 2, ["Child", "Total cost", "Tuition & fees", "Living costs", "One-time & contingency", "Required monthly (year 1)"])
-    for k in range(KIDS):
-        r = 20 + k
-        c = L(3 + k)
-        put(ws, f"B{r}", f"={SV}!{c}4", border=True)
-        for col, key in zip("CDEF", ["total", "tui", "liv", "oth"]):
-            put(ws, f"{col}{r}", f"={SV}!{c}{SR[key]}", fmt=NUM, border=True)
-        put(ws, f"G{r}", f'=IF(ContribMode="Annual",{SV}!{c}{SR["X"]},{SV}!{c}{SR["X"]}/12)', fmt=NUM, border=True)
-    put(ws, "B24", "Monthly column shows the annual figure when contribution timing is 'Annual'.", MUTED)
+    ws.column_dimensions["B"].width = 64
+    for c in "CDEF":
+        ws.column_dimensions[c].width = 22
+    ws.column_dimensions["G"].width = 60
+    put(ws, "B1", "Children's Future Education Fund - your inputs", TITLE)
+    put(ws, "B2", "Fill in the yellow cells. Leave a cell blank to use the researched figure or default. Results are on the Dashboard.", MUTED)
+    fam = [("Number of children (1-4)", 1, "0", "Children beyond this number are ignored."),
+           ("Country where your family lives", "Pakistan", None, "Used for first-travel estimates."),
+           ("Children's nationality", "Pakistan", None, "Decides local or international fees and visa costs."),
+           ("Show results in (currency)", "USD", None, "'Automatic' uses Child 1's study country currency."),
+           ("Covered by scholarship / part-time work", 0, PCT, "Reduces tuition, university fees and living costs. Visa and travel are not reduced."),
+           ("Investment return per year (blank = default for the currency)", None, PCT, "An assumption, not a guarantee."),
+           ("Yearly increase in your savings", 0, PCT, "0% = the same amount every year."),
+           ("Compare countries for child number", 1, "0", "Used on the Compare Countries sheet.")]
+    put(ws, "B3", "Family", H2)
+    for i, (lab, val, fmt, note) in enumerate(fam):
+        r = 4 + i
+        put(ws, f"B{r}", lab, BOLD)
+        put(ws, f"C{r}", val, fill=INPUT_FILL, fmt=fmt, lock=False, border=True)
+        put(ws, f"G{r}", note, MUTED)
+    put(ws, "D3", "Value used", MUTED)
+    put(ws, "D7", '=IF(C7="Automatic",IFERROR(INDEX(Ctry_Ccy,MATCH(C17,Ctry_Name,0)),"USD"),IF(C7="","USD",C7))', fill=CALC_FILL)
+    put(ws, "D8", "=MIN(1,MAX(0,N(C8)))", fill=CALC_FILL, fmt=PCT)
+    put(ws, "D9", "=IF(ISNUMBER(C9),C9,IFERROR(INDEX(Ret_Rate,MATCH(D7,Ret_Ccy,0)),0.05))", fill=CALC_FILL, fmt=PCT)
+    put(ws, "D10", "=N(C10)", fill=CALC_FILL, fmt=PCT)
+    put(ws, "D4", "=MIN(4,MAX(1,ROUND(N(C4),0)))", fill=CALC_FILL, fmt="0")
+    put(ws, "D11", "=MIN(D4,MAX(1,ROUND(N(C11),0)))", fill=CALC_FILL, fmt="0")
+    name("NumChildren", S_IN, "$D$4")
+    name("Residence", S_IN, "$C$5")
+    name("Nationality", S_IN, "$C$6")
+    name("RepCcy", S_IN, "$D$7")
+    name("Coverage", S_IN, "$D$8")
+    name("ReturnRate", S_IN, "$D$9")
+    name("SavInc", S_IN, "$D$10")
+    name("CmpChild", S_IN, "$D$11")
 
-    def bar(title, ytitle, data_ref, cats_ref, anchor, stacked=False, titles=True):
-        ch = BarChart()
-        ch.type = "col"
-        ch.title = title
-        ch.y_axis.title = ytitle
-        ch.add_data(data_ref, titles_from_data=titles)
-        ch.set_categories(cats_ref)
-        if stacked:
-            ch.grouping = "stacked"; ch.overlap = 100
-        ch.height, ch.width = 7.5, 15
-        ch.legend.position = "b"
-        ws.add_chart(ch, anchor)
-        return ch
+    put(ws, "B13", "Children", H2)
+    for i in range(KIDS):
+        put(ws, f"{L(3 + i)}13", "Child %d" % (i + 1), HDR, fill=HDR_FILL, border=True)
+    kid_rows = [("name", "Name (optional)", None, None), ("age", "Current age (0-18)", None, "0"),
+                ("schoolClass", "Current school class (0-13, for your reference)", None, "0"),
+                ("country", "Education country", None, None), ("qualification", "Qualification", None, None),
+                ("entryAge", "College-entry age (usually 18)", 18, "0"),
+                ("tInf", "Your own fee increase per year (blank = researched default)", None, PCT),
+                ("lInf", "Your own living-cost increase per year (blank = default)", None, PCT)]
+    IN = {}
+    for j, (key, lab, default, fmt) in enumerate(kid_rows):
+        r = 14 + j
+        put(ws, f"B{r}", lab, BOLD)
+        IN[key] = r
+        for i in range(KIDS):
+            put(ws, f"{L(3 + i)}{r}", default, fill=INPUT_FILL, fmt=fmt, lock=False, border=True)
+    put(ws, "B22", "Your own cost figures (optional) - per year unless one-time, today's prices, in the education country's currency", H2)
+    ws.merge_cells("B22:F22")
+    ws.row_dimensions[22].height = 34
+    ws["B22"].alignment = WRAP
+    for j, (key, lab) in enumerate([(it[0], it[1] + (" (one-time)" if it[3] == "once" else "")) for it in ITEMS] + PRE_ITEMS):
+        r = 23 + j
+        put(ws, f"B{r}", lab)
+        IN["ov_" + key] = r
+        for i in range(KIDS):
+            put(ws, f"{L(3 + i)}{r}", None, fill=INPUT_FILL, fmt=NUM, lock=False, border=True)
+    put(ws, "B36", "Researched figures and their sources are on each child's sheet (Child 1 to Child 4). Figures marked "
+                   "'Estimated — please review' are planning estimates, not official fees.", MUTED, wrap=True)
+    ws.merge_cells("B36:G36")
+    ws.row_dimensions[36].height = 30
 
-    bar("1. Education cost by child", "Reporting currency", Reference(ws, min_col=3, min_row=19, max_row=23),
-        Reference(ws, min_col=2, min_row=20, max_row=23), "B27")
-    bar("2. Cost breakdown by child", "Reporting currency", Reference(ws, min_col=4, max_col=6, min_row=19, max_row=23),
-        Reference(ws, min_col=2, min_row=20, max_row=23), "E27", stacked=True)
-    bar("4. Required additional monthly saving by child (year 1)", "Reporting currency",
-        Reference(ws, min_col=7, min_row=19, max_row=23), Reference(ws, min_col=2, min_row=20, max_row=23), "B43")
-    yrs = 35
-    svs = ws_sv
-    c3 = LineChart()
-    c3.title = "3. Projected fund balance vs education expenses (family, required plan)"
-    c3.add_data(Reference(svs, min_col=33, min_row=FY_FIRST - 1, max_row=FY_FIRST + yrs - 1), titles_from_data=True)
-    c3.set_categories(Reference(svs, min_col=28, min_row=FY_FIRST, max_row=FY_FIRST + yrs - 1))
-    b3 = BarChart()
-    b3.add_data(Reference(svs, min_col=29, min_row=FY_FIRST - 1, max_row=FY_FIRST + yrs - 1), titles_from_data=True)
-    c3 += b3
-    c3.height, c3.width = 7.5, 15; c3.legend.position = "b"
-    ws.add_chart(c3, "E43")
-    c5 = BarChart()
-    c5.title = "5. Family cash-flow requirements by year"
-    c5.add_data(Reference(svs, min_col=30, max_col=31, min_row=FY_FIRST - 1, max_row=FY_FIRST + yrs - 1), titles_from_data=True)
-    c5.add_data(Reference(svs, min_col=29, min_row=FY_FIRST - 1, max_row=FY_FIRST + yrs - 1), titles_from_data=True)
-    c5.set_categories(Reference(svs, min_col=28, min_row=FY_FIRST, max_row=FY_FIRST + yrs - 1))
-    c5.height, c5.width = 7.5, 31; c5.legend.position = "b"
-    ws.add_chart(c5, "B59")
-    put(ws, "B76", data["disclaimer"], MUTED, wrap=True)
-    ws.merge_cells("B76:G77")
+    def dv(formula, ref, kind="list", **kw):
+        v = DataValidation(type=kind, formula1=formula, allow_blank=True, **kw)
+        v.error, v.errorTitle = "Please choose or enter a valid value.", "Invalid value"
+        ws.add_data_validation(v)
+        v.add(ref)
+    dv('"1,2,3,4"', "C4")
+    dv("=" + list_places, "C5")
+    dv("=" + list_places, "C6")
+    dv("=" + list_ccys, "C7")
+    dv("0", "C8", "decimal", operator="between", formula2="1")
+    dv("-0.5", "C9", "decimal", operator="between", formula2="0.3")
+    dv("0", "C10", "decimal", operator="between", formula2="0.2")
+    dv('"1,2,3,4"', "C11")
+    dv("0", f"C{IN['age']}:F{IN['age']}", "whole", operator="between", formula2="18")
+    dv("0", f"C{IN['schoolClass']}:F{IN['schoolClass']}", "whole", operator="between", formula2="13")
+    dv("=" + list_countries, f"C{IN['country']}:F{IN['country']}")
+    dv("=" + list_quals, f"C{IN['qualification']}:F{IN['qualification']}")
+    dv("14", f"C{IN['entryAge']}:F{IN['entryAge']}", "whole", operator="between", formula2="45")
+    dv("-0.2", f"C{IN['tInf']}:F{IN['lInf']}", "decimal", operator="between", formula2="0.5")
+    dv("0", f"C23:F34", "decimal", operator="greaterThanOrEqual")
+    ws.freeze_panes = "C4"
 
-    # ------------------------------------------------------------------ Research Sources and Methodology
-    ws = ws_rs
-    put(ws, "A1", "Research Sources and Methodology", TITLE)
-    put(ws, "A2", "IMPORTANT: this calculator is an educational planning tool, not a guarantee of future costs or investment "
-        "performance. " + data["disclaimer"], font(bold=True, color="A61E2A"), wrap=True)
-    ws.merge_cells("A2:H2"); ws.row_dimensions[2].height = 44
-    for col, w in zip("ABCDEFGH", [7, 30, 22, 26, 14, 9, 12, 70]):
-        ws.column_dimensions[col].width = w
-    put(ws, "A4", "Source register (one row per fee benchmark)", H2)
-    header_row(ws, 5, 1, ["ID", "Institution", "Qualification", "Student category", "Academic year", "Currency", "Date verified", "Source URL / status"])
-    for i, rec in enumerate(recs):
-        r = 6 + i
-        for j, v in enumerate([rec["id"], rec["university"], rec["qualification"], rec["studentCategory"], rec["feeYear"],
-                               rec["currency"], rec["lastVerified"], rec["sourceUrl"] + "  —  " + rec["status"]]):
-            put(ws, f"{L(1+j)}{r}", v, border=True)
-        ws[f"H{r}"].hyperlink = rec["sourceUrl"]
-    r = 7 + len(recs)
-    for l in data["livingBenchmarks"]:
-        for j, v in enumerate(["LIV", "Living: " + l["country"], "All", l["studentCategory"], l["year"], l["currency"],
-                               data["datasetDate"], l["sourceUrl"] + "  —  " + l["status"]]):
-            put(ws, f"{L(1+j)}{r}", v, border=True)
-        ws[f"H{r}"].hyperlink = l["sourceUrl"]
-        r += 1
-    r += 1
-    method = [
-        ("Data inclusion and exclusion criteria",
-         "Official university fee pages first; government or university pages for living costs. Domestic and international fees are "
-         "never combined; each record states its student category, level, currency, fee year and source. Refundable deposits are "
-         "excluded. One-time fees are never treated as annual. Historical figures, published ranges and regulatory caps are kept "
-         "for reference but excluded from averages. Visa 'proof of funds' amounts are not used as living costs."),
-        ("University averaging methodology",
-         "For each country, qualification and student category: count, arithmetic mean (default estimate), median, lowest and "
-         "highest annual tuition across records with Include In Average = Yes and the same currency. Adjacent fee years are allowed "
-         "and listed in each record. One valid record is labelled a single-institution benchmark. Tuition and living costs are "
-         "calculated separately; the average uses the country living benchmark."),
-        ("Exchange-rate methodology", data["exchangeRates"]["convention"] + " Reference date " + data["exchangeRates"]["date"] +
-         ". An optional annual drift lets parents model a weakening or strengthening home currency. No rate is substituted silently."),
-        ("Inflation assumptions", "Separate editable tuition and living-cost inflation by education country (tblInflation). "
-         "Future cost = current cost × (1 + inflation)^(years from the fee year to the year the cost is paid)."),
-        ("Investment-return assumptions", A["returnNote"] + " Zero and negative returns are allowed (above −99%)."),
-        ("Financial calculation formulas",
-         "Per child and plan year p: available = opening + other funding − education expense (paid at the start of the year); "
-         "closing = available × (1 + r) + contributions (monthly: 12 × amount × timing factor, where timing factor = "
-         "((1+r)^(1) − 1)/((1+r)^(1/12) − 1)/12; annual: paid at year-end). Contributions rise by the escalation rate and stop "
-         "after the year before the last study-year payment. The required additional contribution is the smallest first-year amount "
-         "(escalating) keeping every year's available balance ≥ 0; where a cost falls before any contribution can arrive, an "
-         "up-front lump sum is computed first. Requirements are never negative. Coverage = 1 − shortfall ÷ total cost under the "
-         "current plan, where unfunded costs are recorded as shortfall and the balance is floored at zero."),
-        ("Known limitations",
-         "Coverage is limited (see Coverage gaps). Some records are single-institution benchmarks; some fees are year-1 values "
-         "where later years differ; programme-specific fees may be missing; living costs for Pakistan and India are partial. "
-         "Taxes, loans, part-time work and currency hedging are not modelled. Ages are whole years and costs are annual."),
-        ("Coverage gaps", " • ".join(data["coverageGaps"])),
+    # ---------------- cost block (used by each child sheet and by Compare Calc) ----------------
+    def cost_block(ws, top, p):
+        """Writes one child's cost calculation from row `top`. p: formulas for active, country, qual, age, entry,
+        tinf, linf (custom rate cells or None) and ov (dict item -> cell, or None). Returns cell addresses."""
+        A = {}
+        rows = ["Included (1 = yes)", "Education country", "Qualification", "Current age", "College-entry age", "Fee status",
+                "Lookup key", "Cost database row", "Education currency", "Course length (years)", "Offered in this country (1/0)",
+                "Pre-stage years", "Fee increase used", "Living-cost increase used", "Years until college", "Study years",
+                "Plan years", "Saving years", "Calculated (1 = yes)", "Message", "Exchange rate (education to results currency)",
+                "Published fee records used", "Fee records currency", "Living costs row", "Visa row", "Travel row"]
+        for i, lab in enumerate(rows):
+            A[lab] = f"$B${top + i}"
+            put(ws, f"A{top + i}", lab)
+        a = A
+        b = lambda lab: a[lab]
+        age, entry = b("Current age"), b("College-entry age")
+        age_ok = f"IFERROR(AND(ISNUMBER({age}),{age}>=0,{age}<=18,INT({age})={age}),FALSE)"
+        entry_ok = f"IFERROR(AND(ISNUMBER({entry}),{entry}>=14,{entry}<=45,INT({entry})={entry}),FALSE)"
+        F_ = {
+            "Included (1 = yes)": "=" + p["active"],
+            "Education country": f'=IF({p["country"]}="","",{p["country"]})',
+            "Qualification": f'=IF({p["qual"]}="","",{p["qual"]})',
+            "Current age": f'=IF({p["age"]}="","",{p["age"]})',
+            "College-entry age": f'=IF({p["entry"]}="","",{p["entry"]})',
+            "Fee status": f'=IF({b("Education country")}="","",IF(COUNTIF(DomKey,{b("Education country")}&"|"&Nationality)>0,"domestic","international"))',
+            "Lookup key": f'={b("Education country")}&"|"&{b("Qualification")}&"|"&{b("Fee status")}',
+            "Cost database row": f'=IFERROR(MATCH({b("Lookup key")},DB_Key,0),0)',
+            "Education currency": f'=IFERROR(INDEX(Ctry_Ccy,MATCH({b("Education country")},Ctry_Name,0)),"USD")',
+            "Course length (years)": f'=IF({b("Cost database row")}>0,INDEX(DB_Dur,{b("Cost database row")}),0)',
+            "Offered in this country (1/0)": f'=IF({b("Cost database row")}>0,INDEX(DB_Avail,{b("Cost database row")}),0)',
+            "Pre-stage years": f'=IF({b("Cost database row")}>0,INDEX(DB_PreYears,{b("Cost database row")}),0)',
+            "Fee increase used": (f'=IF(ISNUMBER({p["tinf"]}),{p["tinf"]},' if p["tinf"] else "=IF(FALSE,0,") +
+                                 f'IF({b("Cost database row")}>0,INDEX(DB_TInf,{b("Cost database row")}),0))',
+            "Living-cost increase used": (f'=IF(ISNUMBER({p["linf"]}),{p["linf"]},' if p["linf"] else "=IF(FALSE,0,") +
+                                         f'IFERROR(INDEX(Ctry_LInf,MATCH({b("Education country")},Ctry_Name,0)),0))',
+            "Years until college": f'=IF({b("Calculated (1 = yes)")}=1,MAX(0,{entry}-{age}),0)',
+            "Study years": f'=ROUNDUP({b("Course length (years)")},0)',
+            "Plan years": f'=IF({b("Calculated (1 = yes)")}=1,{b("Years until college")}+{b("Study years")},0)',
+            "Saving years": f'=MAX(0,{b("Plan years")}-1)',
+            "Calculated (1 = yes)": f'=IF(IFERROR(AND({b("Included (1 = yes)")}=1,{b("Education country")}<>"",{b("Qualification")}<>"",'
+                                    f'{b("Offered in this country (1/0)")}=1,{age_ok},{entry_ok}),FALSE),1,0)',
+            "Message": f'=IF({b("Included (1 = yes)")}<>1,"",IF(AND({age}="",{b("Education country")}="",{b("Qualification")}=""),"Enter this child\'s details on the Inputs sheet.",IF(NOT({age_ok}),"Choose the child\'s current age (0 to 18).",'
+                       f'IF(NOT({entry_ok}),"College-entry age must be a whole number from 14 to 45.",'
+                       f'IF({b("Education country")}="","Choose the education country.",IF({b("Qualification")}="","Choose the qualification.",'
+                       f'IF({b("Offered in this country (1/0)")}<>1,"This qualification is not offered (or has no typical duration) in the selected country.","")))))))',
+            "Exchange rate (education to results currency)": f'={FX("RepCcy")}/{FX(b("Education currency"))}',
+            "Published fee records used": f'=IF({b("Cost database row")}=0,0,COUNTIF(RecKey,{b("Lookup key")}))',
+            "Fee records currency": f'=IF({b("Published fee records used")}>0,INDEX(DB_RecCcy,{b("Cost database row")}),'
+                                    f'IF({b("Cost database row")}>0,INDEX(DB_EstCcy,{b("Cost database row")}),{b("Education currency")}))',
+            "Living costs row": f'=IFERROR(MATCH({b("Education country")}&"|"&{b("Fee status")},LivKey,0),0)',
+            "Visa row": f'=IFERROR(MATCH({b("Education country")}&"|"&Nationality,VisaKey,0),0)',
+            "Travel row": f'=IFERROR(MATCH({b("Education country")}&"|"&Residence,TravKey,0),0)',
+        }
+        for lab in rows:
+            cell = put(ws, a[lab].replace("$", ""), F_[lab], fill=CALC_FILL)
+            if lab in ("Fee increase used", "Living-cost increase used"):
+                cell.number_format = PCT
+        row_db, cnt, rccy, edu = b("Cost database row"), b("Published fee records used"), b("Fee records currency"), b("Education currency")
+        trate, pre_y, lrow, vrow, trow = b("Fee increase used"), b("Pre-stage years"), b("Living costs row"), b("Visa row"), b("Travel row")
+        conv = lambda amt, ccy: f"({amt})/{FX(ccy)}*{FX(edu)}"
+
+        # cost lines (today's prices, education currency)
+        ct = top + len(rows) + 1
+        header_row(ws, ct, 1, ["Cost line", "Researched (education currency)", "Your figure", "Amount used", "Price year",
+                               "Status code", "Status", "Increase", "Timing", "Scholarship applies"])
+        lines = {}
+        allitems = [(k, lab) for k, lab, *_ in ITEMS] + PRE_ITEMS
+        for i, (k, lab) in enumerate(allitems):
+            r = ct + 1 + i
+            lines[k] = r
+            put(ws, f"A{r}", lab)
+            def main_bench(rec_col, est_col):
+                return (f"IF({row_db}=0,0,{conv(f'IF({cnt}>0,SUMPRODUCT((RecKey={b('Lookup key')})*{rec_col}*(1+{trate})^(PlanYear-RecYear))/{cnt},INDEX({est_col},{row_db}))', rccy)})")
+            main_base = f"IF({cnt}>0,PlanYear,IF({row_db}>0,INDEX(DB_EstBase,{row_db}),PlanYear))"
+            main_status = f'IF({row_db}=0,"missing",IF({cnt}>0,"verified",INDEX(DB_EstStatus,{row_db})))'
+            pre_amt = lambda col: f"IF({pre_y}>0,{conv(f'INDEX({col},{row_db})', f'INDEX(DB_PreCcy,{row_db})')},0)"
+            if k == "tuition":
+                res, base, st = "=" + main_bench("RecTuition", "DB_EstTuition"), "=" + main_base, "=" + main_status
+            elif k == "otherFees":
+                res, base, st = "=" + main_bench("RecOther", "DB_EstOther"), "=" + main_base, "=" + main_status
+            elif k == "admission":
+                res = f"=IF({pre_y}>0,{pre_amt('DB_PreAdm')},{main_bench('RecAdm', 'DB_EstAdm')})"
+                base = f"=IF({pre_y}>0,INDEX(DB_PreBase,{row_db}),{main_base})"
+                st = f"=IF({pre_y}>0,INDEX(DB_PreStatus,{row_db}),{main_status})"
+            elif k in ("preTuition", "preOtherFees"):
+                col = "DB_PreTuition" if k == "preTuition" else "DB_PreOther"
+                res = "=" + pre_amt(col)
+                base = f"=IF({pre_y}>0,INDEX(DB_PreBase,{row_db}),PlanYear)"
+                st = f'=IF({pre_y}>0,INDEX(DB_PreStatus,{row_db}),"")'
+            elif k in LIVING_KEYS:
+                res = f"=IF({lrow}=0,0,{conv(f'INDEX(Liv_{k}_Amt,{lrow})', f'INDEX(Liv_{k}_Ccy,{lrow})')})"
+                base = f"=IF({lrow}=0,PlanYear,INDEX(Liv_{k}_Base,{lrow}))"
+                st = f'=IF({lrow}=0,"missing",INDEX(Liv_{k}_Status,{lrow}))'
+            elif k == "visaApplication":
+                res = f"=IF({vrow}=0,0,{conv(f'INDEX(VisaAmt,{vrow})', f'INDEX(VisaCcy,{vrow})')})"
+                base = f"=IF({vrow}=0,PlanYear,INDEX(VisaBase,{vrow}))"
+                st = f'=IF({vrow}=0,"missing",INDEX(VisaStatus,{vrow}))'
+            else:  # travelRelocation
+                res = f"=IF({trow}=0,0,{conv(f'INDEX(TravAmt,{trow})', f'INDEX(TravCcy,{trow})')})"
+                base = f"=IF({trow}=0,PlanYear,INDEX(TravBase,{trow}))"
+                st = f'=IF({trow}=0,"missing",INDEX(TravStatus,{trow}))'
+            ov = p["ov"][k] if p["ov"] else None
+            put(ws, f"B{r}", res, fill=CALC_FILL, fmt=NUM)
+            put(ws, f"C{r}", ("=IF(ISNUMBER(%s),%s,\"\")" % (ov, ov)) if ov else "", fmt=NUM)
+            put(ws, f"D{r}", f"=IF(ISNUMBER(C{r}),IF(C{r}>=0,C{r},B{r}),B{r})", fill=CALC_FILL, fmt=NUM)
+            put(ws, f"E{r}", f"=IF(ISNUMBER(C{r}),PlanYear,{base[1:]})", fill=CALC_FILL)
+            put(ws, f"F{r}", f'=IF(ISNUMBER(C{r}),"override",{st[1:]})', fill=CALC_FILL)
+            put(ws, f"G{r}", "=" + STATUS_LABEL.format(s=f"F{r}"))
+            meta = next((it for it in ITEMS if it[0] == k), None)
+            put(ws, f"H{r}", meta[2] if meta else "tuition")
+            put(ws, f"I{r}", meta[3] if meta else "annual")
+            put(ws, f"J{r}", ("Yes" if meta[4] else "No") if meta else "Yes")
+
+        # study years: gross and net (after scholarship) per cost line
+        st_top = ct + len(allitems) + 2
+        hdr = ["Study year (0 = first)", "Calendar year", "Fraction of year", "In pre-stage (1/0)", "In course (1/0)"]
+        hdr += [lab + " (gross)" for _, lab, *_ in ITEMS] + [lab for _, lab, *_ in ITEMS] + ["Education expenses", "Before scholarship"]
+        header_row(ws, st_top, 1, hdr)
+        calc_ok, n_ref, E_ref, D_ref = b("Calculated (1 = yes)"), b("Years until college"), b("Study years"), b("Course length (years)")
+        fx = b("Exchange rate (education to results currency)")
+        lrate = b("Living-cost increase used")
+        first = st_top + 1
+        for kk in range(STUDY):
+            r = first + kk
+            put(ws, f"A{r}", kk)
+            put(ws, f"B{r}", f"=PlanYear+{n_ref}+A{r}")
+            put(ws, f"C{r}", f"=MAX(0,MIN(1,{D_ref}-A{r}))")
+            put(ws, f"D{r}", f"=IF(A{r}<{pre_y},1,0)")
+            put(ws, f"E{r}", f"=IF(AND({calc_ok}=1,A{r}<{E_ref}),1,0)")
+            for j, (k, lab, inf, timing, covered) in enumerate(ITEMS):
+                if k == "tuition":
+                    amt, base = f"IF(D{r}=1,$D${lines['preTuition']},$D${lines['tuition']})", f"IF(D{r}=1,$E${lines['preTuition']},$E${lines['tuition']})"
+                elif k == "otherFees":
+                    amt, base = f"IF(D{r}=1,$D${lines['preOtherFees']},$D${lines['otherFees']})", f"IF(D{r}=1,$E${lines['preOtherFees']},$E${lines['otherFees']})"
+                else:
+                    amt, base = f"$D${lines[k]}", f"$E${lines[k]}"
+                rate = trate if inf == "tuition" else lrate
+                when = f"E{r}=1" if timing == "annual" else f"E{r}=1,A{r}=0"
+                frac = f"*C{r}" if timing == "annual" else ""
+                g = L(6 + j)
+                put(ws, f"{g}{r}", f"=IF(AND({when}),{amt}*(1+{rate})^(B{r}-{base}){frac}*{fx},0)", fmt=NUM)
+                put(ws, f"{L(6 + len(ITEMS) + j)}{r}", f"={g}{r}*{'(1-Coverage)' if covered else '1'}", fmt=NUM)
+            net0, net1 = L(6 + len(ITEMS)), L(5 + 2 * len(ITEMS))
+            put(ws, f"{L(6 + 2 * len(ITEMS))}{r}", f"=SUM({net0}{r}:{net1}{r})", BOLD, fmt=NUM)
+            put(ws, f"{L(7 + 2 * len(ITEMS))}{r}", f"=SUM(F{r}:{L(5 + len(ITEMS))}{r})", fmt=NUM)
+        last_r = first + STUDY - 1
+        tot = last_r + 1
+        put(ws, f"A{tot}", "Total", BOLD)
+        for j in range(2 * len(ITEMS) + 2):
+            col = L(6 + j)
+            put(ws, f"{col}{tot}", f"=SUM({col}{first}:{col}{last_r})", BOLD, fmt=NUM)
+        exp_col = L(6 + 2 * len(ITEMS))
+        out = {
+            "ok": calc_ok, "n": n_ref, "E": E_ref, "H": b("Plan years"), "P": b("Saving years"), "D": D_ref, "msg": b("Message"),
+            "country": b("Education country"), "qual": b("Qualification"),
+            "exp_range": f"${exp_col}${first}:${exp_col}${last_r}",
+            "total": f"${exp_col}${tot}", "gross": f"${L(7 + 2 * len(ITEMS))}${tot}",
+            "item_total": {k: f"${L(6 + len(ITEMS) + j)}${tot}" for j, (k, *_r) in enumerate(ITEMS)},
+            "status": {k: f"$F${lines[k]}" for k in lines}, "pre_y": pre_y, "end": tot,
+        }
+        # summary
+        s = tot + 2
+        put(ws, f"A{s}", "Total estimated education cost (results currency)", BOLD)
+        put(ws, f"B{s}", f"={out['total']}", BOLD, fill=GOLD_FILL, fmt=NUM)
+        put(ws, f"A{s + 1}", "Covered by scholarship / part-time work")
+        put(ws, f"B{s + 1}", f"={out['gross']}-{out['total']}", fmt=NUM)
+        put(ws, f"A{s + 2}", "Tuition figure status")
+        ts, ps = out["status"]["tuition"], out["status"]["preTuition"]
+        put(ws, f"B{s + 2}", f'=IF(OR({ts}="missing",AND({pre_y}>0,{ps}="missing")),"missing",IF(OR({ts}="estimated",AND({pre_y}>0,{ps}="estimated")),"estimated",IF({pre_y}>0,{ps},{ts})))')
+        put(ws, f"A{s + 3}", "Some costs have no figure (1/0)")
+        put(ws, f"B{s + 3}", f'=IF(OR({ts}="missing",AND({pre_y}>0,{ps}="missing"),{out["status"]["accommodation"]}="missing"),1,0)')
+        out.update({"tuition_status": f"$B${s + 2}", "has_missing": f"$B${s + 3}", "covered": f"$B${s + 1}", "end": s + 3})
+        return out
+
+    # ---------------- Child sheets: cost block + savings + yearly roll-forward ----------------
+    KO = []
+    for i, ws in enumerate(kid_ws):
+        col = L(3 + i)
+        ref = lambda key: f"{q(S_IN)}!${col}${IN[key]}"
+        ws.column_dimensions["A"].width = 44
+        ws.column_dimensions["B"].width = 18
+        for c in range(3, 30):
+            ws.column_dimensions[L(c)].width = 13
+        ws.column_dimensions["G"].width = 30
+        put(ws, "A1", "Child %d - cost and savings calculation" % (i + 1), TITLE)
+        put(ws, "A2", "All formulas. Change inputs on the Inputs sheet. Amounts in the cost lines table are in the education "
+                      "country's currency; everything else is in the results currency.", MUTED)
+        o = cost_block(ws, 4, {"active": f"IF({i + 1}<=NumChildren,1,0)", "country": ref("country"), "qual": ref("qualification"),
+                                "age": ref("age"), "entry": ref("entryAge"), "tinf": ref("tInf"), "linf": ref("lInf"),
+                                "ov": {k: ref("ov_" + k) for k in [it[0] for it in ITEMS] + [x[0] for x in PRE_ITEMS]}})
+        # savings and roll-forward
+        top = o["end"] + 3
+        put(ws, f"A{top - 1}", "Savings and yearly fund (results currency). Costs are paid at the start of each year, savings added at the end.", H2)
+        hdr = ["Plan year", "Calendar year", "Study year", "Education expenses", "Saving factor", "Growth factor",
+               "a (no saving)", "b (per 1 saved)", "A carried", "B carried", "Needed-now candidate", "Saving candidate",
+               "Opening fund", "Family savings added", "Investment growth", "Closing fund", "Studying (1/0)"]
+        header_row(ws, top, 1, hdr)
+        first = top + 1
+        lastp = first + ROWS - 1
+        lump_c, x_c = f"$B${lastp + 2}", f"$B${lastp + 3}"
+        ok, n_, E_, H_, P_ = o["ok"], o["n"], o["E"], o["H"], o["P"]
+        for pp in range(1, ROWS + 1):
+            r = first + pp - 1
+            prev = r - 1
+            put(ws, f"A{r}", pp)
+            put(ws, f"B{r}", f"=PlanYear+A{r}-1")
+            put(ws, f"C{r}", f"=A{r}-1-{n_}")
+            put(ws, f"D{r}", f"=IF(AND({ok}=1,C{r}>=0,C{r}<{E_}),INDEX({o['exp_range']},C{r}+1),0)", fmt=NUM)
+            put(ws, f"E{r}", f"=IF(AND({ok}=1,A{r}<={P_}),(1+SavInc)^(A{r}-1),0)", fmt="0.0000")
+            put(ws, f"F{r}", f"=(1+ReturnRate)^(A{r}-1)", fmt="0.0000")
+            put(ws, f"G{r}", (f"=I{prev}-D{r}" if pp > 1 else f"=-D{r}"), fmt=NUM)
+            put(ws, f"H{r}", (f"=J{prev}" if pp > 1 else "=0"), fmt="0.0000")
+            put(ws, f"I{r}", f"=G{r}*(1+ReturnRate)", fmt=NUM)
+            put(ws, f"J{r}", f"=H{r}*(1+ReturnRate)+E{r}", fmt="0.0000")
+            put(ws, f"K{r}", f"=IF(AND(D{r}>0,H{r}<=1E-12,G{r}<0),-G{r}/F{r},0)", fmt=NUM)
+            put(ws, f"L{r}", f"=IF(AND(D{r}>0,H{r}>1E-12),-(G{r}+{lump_c}*F{r})/H{r},0)", fmt=NUM)
+            put(ws, f"M{r}", (f"=P{prev}" if pp > 1 else f"={lump_c}"), fmt=NUM)
+            put(ws, f"N{r}", f"=E{r}*{x_c}", fmt=NUM)
+            put(ws, f"O{r}", f"=IF(AND({ok}=1,A{r}<={H_}),(M{r}-D{r})*ReturnRate,0)", fmt=NUM)
+            put(ws, f"P{r}", f"=M{r}-D{r}+O{r}+N{r}", fmt=NUM)
+            put(ws, f"Q{r}", f"=IF(AND({ok}=1,C{r}>=0,C{r}<{E_}),1,0)")
+        put(ws, f"A{lastp + 2}", "Amount needed now", BOLD)
+        put(ws, lump_c.replace("$", ""), f"=IF({ok}=1,MAX(K{first}:K{lastp}),0)", BOLD, fill=GOLD_FILL, fmt=NUM)
+        put(ws, f"A{lastp + 3}", "Required yearly saving (first year)", BOLD)
+        put(ws, x_c.replace("$", ""), f"=IF({ok}=1,IF(MAX(0,MAX(L{first}:L{lastp}))<1E-9,0,MAX(0,MAX(L{first}:L{lastp}))),0)",
+            BOLD, fill=GOLD_FILL, fmt=NUM)
+        ws.freeze_panes = "B4"
+        o.update({"sheet": ws.title, "first": first, "lump": lump_c, "x": x_c})
+        KO.append(o)
+
+    def kref(i, cell):
+        return f"{q(KO[i]['sheet'])}!{cell}"
+
+    def kcol(i, col, pp):
+        return f"{q(KO[i]['sheet'])}!${col}${KO[i]['first'] + pp - 1}"
+
+    kname = lambda i: f'IF({q(S_IN)}!${L(3 + i)}${IN["name"]}<>"",{q(S_IN)}!${L(3 + i)}${IN["name"]},"Child {i + 1}")'
+
+    # ---------------- Dashboard ----------------
+    ws = ws_dash
+    ws.column_dimensions["A"].width = 2
+    widths = {"B": 44, "C": 16, "D": 26, "E": 18, "F": 18, "G": 20, "H": 18, "I": 50}
+    for c, w in widths.items():
+        ws.column_dimensions[c].width = w
+    put(ws, "B1", "Children's Future Education Fund - dashboard", TITLE)
+    put(ws, "B2", '="All amounts in "&RepCcy&", at future prices. Planning estimates only - not financial advice."', MUTED)
+    total_c, save_c, lump_c, hmax_c = "$C$4", "$C$5", "$C$6", "$C$8"
+    put(ws, "B4", "Total education fund required", BIG)
+    put(ws, "C4", "=" + "+".join(kref(i, KO[i]["total"]) for i in range(KIDS)), BIG, fill=GOLD_FILL, fmt=NUM)
+    put(ws, "B5", "Required yearly savings (this year)", BIG)
+    put(ws, "C5", "=" + "+".join(kcol(i, "N", 1) for i in range(KIDS)), BIG, fill=GOLD_FILL, fmt=NUM)
+    put(ws, "B6", "Amount needed now", BOLD)
+    put(ws, "C6", "=" + "+".join(kref(i, KO[i]["lump"]) for i in range(KIDS)), BOLD, fmt=NUM)
+    put(ws, "D4", '=IF(C4=0,"Enter your family and children\'s details on the Inputs sheet to see the figures.","")', MUTED)
+    put(ws, "D6", '=IF(C6>0.5,"Plus about "&TEXT(C6,"#,##0")&" "&RepCcy&" needed now, because a course starts before any yearly saving can be made.","")', MUTED)
+    put(ws, "B7", "Covered by scholarship / part-time work")
+    put(ws, "C7", "=" + "+".join(kref(i, KO[i]["covered"]) for i in range(KIDS)), fmt=NUM)
+    put(ws, "B8", "Plan length (years)")
+    put(ws, "C8", "=MAX(" + ",".join(kref(i, KO[i]["H"]) for i in range(KIDS)) + ")")
+
+    put(ws, "B10", "Each child", H2)
+    header_row(ws, 11, 2, ["Child", "Education country", "Qualification", "Course length (years)", "Education starts in",
+                           '="Total ("&RepCcy&")"', "Message"])
+    for i in range(KIDS):
+        r = 12 + i
+        on = f"{i + 1}<=NumChildren"
+        o = KO[i]
+        put(ws, f"B{r}", f'=IF({on},{kname(i)},"")')
+        put(ws, f"C{r}", f'=IF({on},{kref(i, o["country"])},"")')
+        put(ws, f"D{r}", f'=IF({on},{kref(i, o["qual"])},"")')
+        put(ws, f"E{r}", f'=IF(AND({on},{kref(i, o["ok"])}=1),{kref(i, o["D"])},"")', fmt="0.0")
+        put(ws, f"F{r}", f'=IF(AND({on},{kref(i, o["ok"])}=1),IF({kref(i, o["n"])}=0,"This year",{kref(i, o["n"])}&" years")&" ("&(PlanYear+{kref(i, o["n"])})&"/"&RIGHT(PlanYear+{kref(i, o["n"])}+1,2)&")","")')
+        put(ws, f"G{r}", f'=IF({on},{kref(i, o["total"])},"")', BOLD, fmt=NUM)
+        put(ws, f"H{r}", f'=IF({on},{kref(i, o["msg"])},"")', MUTED)
+    put(ws, "B16", "All children", BOLD)
+    put(ws, "G16", "=C4", BOLD, fmt=NUM)
+
+    put(ws, "B18", "Where the money goes", H2)
+    header_row(ws, 19, 2, ["Cost type", '="Amount ("&RepCcy&")"', "Share"])
+    for j, (lab, keys) in enumerate(GROUPS):
+        r = 20 + j
+        put(ws, f"B{r}", lab)
+        put(ws, f"C{r}", "=" + "+".join(kref(i, KO[i]["item_total"][k]) for i in range(KIDS) for k in keys), fmt=NUM)
+        put(ws, f"D{r}", f"=IF($C$4>0,C{r}/$C$4,0)", fmt="0%")
+    put(ws, "B28", "Total", BOLD)
+    put(ws, "C28", "=SUM(C20:C27)", BOLD, fmt=NUM)
+
+    put(ws, "B30", "Year-by-year plan - how the education fund builds up and is spent", H2)
+    yt = 31
+    header_row(ws, yt, 2, ["Year", "Studying", "Opening fund", "Family savings added", "Investment growth", "Education expenses", "Closing fund"])
+    for pp in range(1, ROWS + 1):
+        r = yt + pp
+        show = f"{pp}<={hmax_c}"
+        put(ws, f"B{r}", f'=IF({show},(PlanYear+{pp - 1})&"/"&RIGHT(PlanYear+{pp},2),"")')
+        names_ = "&".join(f'IF({kcol(i, "Q", pp)}=1,", "&{kname(i)},"")' for i in range(KIDS))
+        put(ws, f"C{r}", f'=IF({show},MID({names_},3,200),"")')
+        for j, colk in enumerate(["M", "N", "O", "D", "P"]):
+            put(ws, f"{L(4 + j)}{r}", f'=IF({show},ROUND(' + "+".join(kcol(i, colk, pp) for i in range(KIDS)) + ',2),"")', fmt=NUM)
+    yl = yt + ROWS
+    notes = yl + 2
+    put(ws, f"B{notes}", f'=IF({lump_c}>0.5,"The opening fund in "&PlanYear&"/"&RIGHT(PlanYear+1,2)&" is the amount needed now ("&RepCcy&" "&TEXT({lump_c},"#,##0")&"): costs that start before any yearly saving can be made. The plan assumes no existing savings.","The plan assumes no existing savings, so the fund starts at zero.")', MUTED)
+    put(ws, f"B{notes + 1}", "Each year: opening fund - education expenses (paid at the start of the year) + investment growth + family savings "
+                             "(added at the end of the year) = closing fund, which becomes the next year's opening fund.", MUTED)
+    saved, grown = f"SUM(E{yt + 1}:E{yl})", f"SUM(F{yt + 1}:F{yl})"
+    final = f"IF({hmax_c}>0,INDEX(H{yt + 1}:H{yl},{hmax_c}),0)"
+    put(ws, f"B{notes + 2}", f'="Adds up: "&RepCcy&" "&TEXT({lump_c},"#,##0")&" needed now + "&RepCcy&" "&TEXT({saved},"#,##0")&" family savings + "&RepCcy&" "&TEXT({grown},"#,##0")&" investment growth - "&RepCcy&" "&TEXT({total_c},"#,##0")&" education expenses = "&RepCcy&" "&TEXT(IF(ABS({final})<0.5,0,{final}),"#,##0")&" left at the end."', MUTED)
+    put(ws, f"I{notes}", None)
+    # chart data (hidden columns), #N/A beyond the plan so the chart leaves gaps
+    ch0 = 20  # column T
+    put(ws, f"{L(ch0)}{yt}", "Year")
+    for i in range(KIDS):
+        put(ws, f"{L(ch0 + 1 + i)}{yt}", f"={kname(i)}")
+    put(ws, f"{L(ch0 + 1 + KIDS)}{yt}", "Family savings")
+    for pp in range(1, CHART_ROWS + 1):
+        r = yt + pp
+        show = f"{pp}<={hmax_c}"
+        put(ws, f"{L(ch0)}{r}", f'=IF({show},B{r},"")')
+        for i in range(KIDS):
+            put(ws, f"{L(ch0 + 1 + i)}{r}", f"=IF({show},{kcol(i, 'D', pp)},NA())")
+        put(ws, f"{L(ch0 + 1 + KIDS)}{r}", f"=IF({show},E{r},NA())")
+    for c in range(ch0, ch0 + KIDS + 2):
+        ws.column_dimensions[L(c)].hidden = True
+    bar = BarChart()
+    bar.type, bar.grouping, bar.overlap = "col", "stacked", 100
+    bar.title = "Education costs by child and family savings, by year"
+    bar.add_data(Reference(ws, min_col=ch0 + 1, max_col=ch0 + KIDS, min_row=yt, max_row=yt + CHART_ROWS), titles_from_data=True)
+    bar.set_categories(Reference(ws, min_col=ch0, min_row=yt + 1, max_row=yt + CHART_ROWS))
+    line = LineChart()
+    line.add_data(Reference(ws, min_col=ch0 + 1 + KIDS, min_row=yt, max_row=yt + CHART_ROWS), titles_from_data=True)
+    line.series[0].smooth = False
+    bar += line
+    bar.x_axis.delete = False
+    bar.y_axis.delete = False
+    bar.y_axis.numFmt = '#,##0'
+    bar.y_axis.majorGridlines = None
+    bar.height, bar.width = 9, 22
+    bar.visible_cells_only = False   # the chart data sits in hidden columns
+    ws.add_chart(bar, "J3")
+    ws.freeze_panes = "A4"
+
+    # ---------------- Compare Countries ----------------
+    ws_c = ws_cc
+    sel = lambda key: "CHOOSE(CmpChild," + ",".join(f"{q(S_IN)}!${L(3 + i)}${IN[key]}" for i in range(KIDS)) + ")"
+    CB = []
+    top = 3
+    put(ws_c, "A1", "Compare Calc - the selected child's course in each country (helper sheet)", TITLE)
+    ws_c.column_dimensions["A"].width = 44
+    for c in countries:
+        put(ws_c, f"A{top - 1}", c, H2)
+        o = cost_block(ws_c, top, {"active": "IF(CmpChild<=NumChildren,1,0)", "country": f'"{c}"', "qual": sel("qualification"),
+                                   "age": sel("age"), "entry": sel("entryAge"), "tinf": sel("tInf"), "linf": sel("lInf"), "ov": None})
+        CB.append(o)
+        top = o["end"] + 4
+    ws_cc.sheet_state = "hidden"
+
+    ws = ws_cmp
+    ws.column_dimensions["A"].width = 2
+    for c, w in {"B": 18, "C": 20, "D": 54, "E": 16}.items():
+        ws.column_dimensions[c].width = w
+    put(ws, "B1", "Compare countries", TITLE)
+    put(ws, "B2", '="The same child and qualification in each country, in "&RepCcy&". Choose the child on the Inputs sheet (Compare countries for child number)."', MUTED)
+    ch = lambda field: "CHOOSE(CmpChild," + ",".join(kref(i, KO[i][field]) for i in range(KIDS)) + ")"
+    put(ws, "B4", "Child", BOLD)
+    put(ws, "C4", "=CHOOSE(CmpChild," + ",".join(kname(i) for i in range(KIDS)) + ")")
+    put(ws, "B5", "Qualification", BOLD)
+    put(ws, "C5", f"={ch('qual')}")
+    put(ws, "B6", "Current plan", BOLD)
+    put(ws, "C6", f'=IF({ch("ok")}=1,{ch("country")},"Enter this child\'s details on the Inputs sheet first.")')
+    header_row(ws, 8, 2, ["Country", '="Total ("&RepCcy&")"', "Note", "Current plan"])
+    for j, c in enumerate(countries):
+        r = 9 + j
+        o = CB[j]
+        is_cur = f'{ch("country")}="{c}"'
+        put(ws, f"B{r}", c, BOLD)
+        put(ws, f"C{r}", f'=IF({ch("ok")}<>1,"",IF({is_cur},{ch("total")},IF({q(S_CC)}!{o["ok"]}=1,{q(S_CC)}!{o["total"]},"Not available")))', BOLD, fmt=NUM)
+        st, hm = f'IF({is_cur},{ch("tuition_status")},{q(S_CC)}!{o["tuition_status"]})', f'IF({is_cur},{ch("has_missing")},{q(S_CC)}!{o["has_missing"]})'
+        put(ws, f"D{r}", f'=IF({ch("ok")}<>1,"",IF(AND(NOT({is_cur}),{q(S_CC)}!{o["ok"]}<>1),{q(S_CC)}!{o["msg"]},'
+                         f'IF({st}="estimated","Estimate — no published fee for this course",IF({hm}=1,"Some costs have no figure yet",""))))', MUTED)
+        put(ws, f"E{r}", f'=IF(AND({ch("ok")}=1,{is_cur}),"Current plan","")', BOLD)
+    put(ws, "B16", "Each total covers the full course in that country (its usual length), at future prices, after your scholarship / "
+                   "part-time-work percentage. The current plan's row is your plan exactly. For other countries your own fee and "
+                   "living-cost increases are used, but your own cost figures are not carried over, because they are in another "
+                   "country's currency.", MUTED, wrap=True)
+    ws.merge_cells("B16:E16")
+    ws.row_dimensions[16].height = 52
+
+    # ---------------- Start Here ----------------
+    ws = ws_start
+    ws.column_dimensions["A"].width = 2
+    ws.column_dimensions["B"].width = 110
+    lines = [
+        ("Children's Future Education Fund Calculator", TITLE),
+        ("Sindhi Connect - sindhiconnect.org", MUTED),
+        ("", None),
+        ("How to use", H2),
+        ("1. Go to the Inputs sheet and fill in the yellow cells: your family details and, for each child, age, education country and qualification.", None),
+        ("2. Open the Dashboard: total education fund required, required yearly savings, amount needed now, each child, cost breakdown and the year-by-year plan.", None),
+        ("3. Compare Countries shows the same course in all six study countries.", None),
+        ("4. Each child's sheet shows every cost line with its status (Published figure / Estimated — please review / Not needed / Your figure) and the full calculation.", None),
+        ("5. To use your own figures, type them in the 'Your own cost figures' rows on the Inputs sheet (today's prices, education country's currency).", None),
+        ("", None),
+        ("Important", H2),
+        (d.get("disclaimer", ""), None),
+        ("Results are in US dollars unless you choose another currency. The workbook uses formulas only (no macros). "
+         "It follows the same method as the calculator on the website; see the Sources and Method sheet.", None),
+        ("Fees checked on " + d["datasetDate"] + ". Exchange rates of " + d["exchangeRates"]["date"] + " (you can enter your own on the Assumptions and Currency sheet).", None),
     ]
-    for lab, txt in method:
-        put(ws, f"A{r}", lab, H2)
-        r += 1
-        put(ws, f"A{r}", txt, wrap=True)
-        ws.merge_cells(f"A{r}:H{r}")
-        ws.row_dimensions[r].height = max(30, 15 * (len(txt) // 150 + 1))
-        r += 2
+    for i, (text, f) in enumerate(lines):
+        c = put(ws, f"B{2 + i}", text, f or font(), wrap=True)
+    ws.sheet_view.showGridLines = False
 
-    # ------------------------------------------------------------------ protection & finish
-    for wsx in (ws_in, ws_fc, ws_sv, ws_ds):
-        wsx.protection.sheet = True
-        wsx.protection.formatRows = False
-        wsx.protection.formatColumns = False
-    ws_in["C3"].comment = Comment("Yellow cells are unlocked. Sheets are protected without a password: Review → Unprotect Sheet.", "Sindhi Connect")
-    wb.active = 0
+    # ---------------- Sources and Method ----------------
+    ws = ws_src
+    ws.column_dimensions["A"].width = 130
+    method = [
+        ("Method (same as the website calculator - docs/education-calculator/METHODOLOGY.md)", H2),
+        ("Fee status: local fees when the child's nationality is a domestic nationality of the study country, otherwise international fees and a student visa.", None),
+        ("University fees: the average of published fee records for the same country, qualification, fee status and currency, each grown to the plan start year by the fee increase. Where none exists, a labelled planning estimate is used.", None),
+        ("Courses entered after another degree (e.g. medicine in the USA) use the pre-stage degree's fees for the first years.", None),
+        ("Each cost line grows by its increase from its price year: line x (1 + increase)^(year - price year) x part of the year x exchange rate. One-time costs fall in the first study year.", None),
+        ("Scholarship / part-time work reduces tuition, university fees and living costs once; visa and travel are not reduced.", None),
+        ("Timing: costs are paid at the start of each year; savings are added at the end. The fund earns the investment return on what is left after costs.", None),
+        ("Amount needed now: costs that come before any yearly saving can be made. Required yearly saving: the smallest first-year saving (rising by the yearly increase) that keeps the fund from running out in any year.", None),
+        ("Yearly plan: opening fund - expenses + growth + savings = closing fund; each closing fund is the next opening fund. The plan assumes no existing savings.", None),
+        ("", None),
+        ("Sources", H2),
+        ("Every published fee record used, with its source link, is on the Fee Records sheet. Planning-estimate bases are in the last column of the Cost Database sheet. "
+         "Living costs, visas and travel are on their own sheets. The full research register is docs/education-calculator/SOURCES.md in the project.", None),
+    ]
+    for i, (text, f) in enumerate(method):
+        put(ws, f"A{1 + i}", text, f or font(), wrap=True)
+
+    # ---------------- protection ----------------
+    for w in wb.worksheets:
+        if w.title not in (S_LISTS, S_CC):
+            w.protection.sheet = True
+            w.protection.formatCells = False
+            w.protection.formatColumns = False
+            w.protection.formatRows = False
+    wb.active = 1
     wb.calculation.fullCalcOnLoad = True
-    wb.save(OUT_XLSX)
-    return {"R": R, "SR": SR, "sv_first": sv_first, "fc_rows": fc_rows}
+    return wb
 
 
 def main():
-    with open(DATA, encoding="utf-8") as fh:
-        data = json.load(fh)
+    with open(DATA, encoding="utf-8") as f:
+        d = json.load(f)
+    wb = build_xlsx(d)
     os.makedirs(os.path.dirname(OUT_XLSX), exist_ok=True)
-    build_js(data)
-    build_sources(data)
-    layout = build_xlsx(data)
-    if "--layout" in sys.argv:
-        print(json.dumps(layout))
-    else:
-        print("Built", OUT_JS, OUT_XLSX, OUT_SOURCES)
+    wb.save(OUT_XLSX)
+    print("Wrote", os.path.relpath(OUT_XLSX, ROOT))
 
 
 if __name__ == "__main__":
