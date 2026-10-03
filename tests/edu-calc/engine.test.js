@@ -223,3 +223,16 @@ test('inflation: each year\'s cost grows by the configured rate', () => {
   const exp = expectedExpenses(child, family, a, 4);
   k.rows.slice(yearsToStart).forEach((r, i) => assert.ok(close(r.expense, exp[i]), 'inflated expense year ' + (i + 1)));
 });
+
+test('comparison: the current country row equals the plan, including own cost edits and fee increases', () => {
+  const fam = { nationality: 'Pakistan', residence: 'Pakistan' };
+  const a = A({ reportingCurrency: 'USD', returnRate: 0.05 });
+  const child = { age: 18, entryAge: 18, country: 'Pakistan', qualification: 'Computer Science',
+    overrides: { tuition: 1200000 }, tuitionInflation: 0, livingInflation: 0 };
+  const plan = E.projectChild(D, child, fam, a);
+  const rows = E.compareCountries(D, child, fam, a, ['Pakistan', 'UK']);
+  assert.ok(close(rows[0].totalCost, plan.summary.totalCost));
+  // other countries keep the parent's percentages but not the cost edits (another currency)
+  const uk = E.projectChild(D, Object.assign({}, child, { country: 'UK', overrides: {} }), fam, a);
+  assert.ok(close(rows[1].totalCost, uk.summary.totalCost));
+});
