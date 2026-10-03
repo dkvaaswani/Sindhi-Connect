@@ -7,7 +7,7 @@ It ships as two deliverables that must share one dataset and one set of rules:
 | Deliverable | Where | Status |
 |---|---|---|
 | Web calculator page | `frontend/education-calculator.html` (live at `/education-calculator.html`) | v2 (simplified) |
-| Excel workbook | `frontend/downloads/Children_Education_Fund_Calculator.xlsx` | still v1 — hidden from the page until rebuilt (needs Python + openpyxl) |
+| Excel workbook | `frontend/downloads/Children_Education_Fund_Calculator.xlsx` | v2 — same method and results as the web page, formulas only |
 
 ## Architecture
 
@@ -21,7 +21,7 @@ data/education/education-costs.json   MASTER dataset v2 (fee records, estimates,
 tools/edu-calc/build-data.ps1         regenerates (Windows, no extra software):
   → frontend/edu-calc/education-data.js            dataset as window.EDU_DATA for the page
   → docs/education-calculator/SOURCES.md           research-source register
-tools/edu-calc/build.py               builds the Excel workbook (v1; to be updated for dataset v2)
+tools/edu-calc/build.py               builds the Excel workbook (method v2; v1 kept in tools/edu-calc/backup/)
   → frontend/downloads/Children_Education_Fund_Calculator.xlsx
 frontend/edu-calc/calc-engine.js      calculation engine (pure functions; also runs in Node for tests)
 frontend/edu-calc/edu-calc.js         page behaviour (steps, forms, results, exports)

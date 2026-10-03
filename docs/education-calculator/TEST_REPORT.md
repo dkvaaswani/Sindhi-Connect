@@ -45,6 +45,26 @@ rows. A 3-child GBP plan with 6% return, 25% scholarship and 3% savings increase
 and chains, Σ expenses = total on screen = total in print. After "Start again" the dashboard, printed report and CSV
 show no figures until details are entered; entering a detail brings them back. No horizontal page scroll at 375 px.
 
+## Excel workbook (method v2) — added 3 October 2026
+
+Built with `tools/edu-calc/build.py` (Python 3.14, openpyxl 3.1.5) and recalculated in Microsoft Excel 16 by
+`tests/edu-calc/excel-parity.ps1`. 14 scenarios (`parity-scenarios.json`): the worked example; UK Law from Qatar (GBP,
+default return); USA Medicine with the pre-medical stage; India MBBS 4.5 years (INR); 4 children in 4 countries (USD,
+6% return, 25% scholarship, 3% savings increase); automatic currency (German student, EUR); own cost figures and own
+increases; Australia Nursing with 100% scholarship (AUD); a course not offered (CPA in the UK) next to a valid child;
+already at college age with 12% return; entry age 21 with USA Dentistry and an own exchange rate; ACCA in Pakistan
+(estimate in GBP) with a negative return; USA CPA / Australian CA comparing child 2; and a blank start.
+
+| Check | Result |
+|---|---|
+| Totals, yearly saving, amount needed now, plan length and results currency | match in all 14 |
+| Yearly roll-forward: 164 years × opening, savings, growth, expenses, closing | all match |
+| Country comparison: 72 country rows (incl. "Not available") | all match |
+| Deliberately altered Excel figures | flagged by the comparison |
+| No formula errors on any sheet; no macros; sheets protected with inputs unlocked | pass |
+| Saved workbook opens blank in USD (Dashboard shows 0 and asks for details) | pass |
+| Layout checked from Excel-rendered images: Inputs, Dashboard (incl. chart), Compare Countries, Child 1 | pass |
+
 ## Comparison, default currency and opening state — added 3 October 2026
 
 - New engine test: the current country's comparison row equals the plan total even with own cost edits and 0% fee
@@ -74,7 +94,5 @@ show no figures until details are entered; entering a detail brings them back. N
 
 ## Not tested / open
 
-- **Excel workbook** — not yet rebuilt for v2 (needs Python + openpyxl), so Excel-vs-web parity was not run. The
-  workbook link is removed from the page until it matches.
 - Node-based test run (`node --test`) — Node is not installed; the identical checks passed in the browser.
 - Research completeness — see "Known gaps" in SOURCES.md for every figure that is still a planning estimate.

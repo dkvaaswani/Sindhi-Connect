@@ -39,7 +39,7 @@ Push to GitHub and the live site updates automatically.
 need to save each year, and how the cost changes between six study countries. Its fee data lives in
 `data/education/education-costs.json`; after editing it run
 `powershell -ExecutionPolicy Bypass -File tools/edu-calc/build-data.ps1` to regenerate the page data and the source
-register. The Excel version is being rebuilt for the simplified method. Full details: `docs/education-calculator/`.
+register. The Excel version (`frontend/downloads/`) is rebuilt with `py tools/edu-calc/build.py`. Full details: `docs/education-calculator/`.
 
 ## Hosting
 
