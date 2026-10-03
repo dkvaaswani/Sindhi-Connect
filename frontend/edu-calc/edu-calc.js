@@ -109,7 +109,7 @@
   function freshState() {
     return {
       version: 2,
-      family: { numChildren: 1, residence: 'Pakistan', nationality: 'Pakistan', repCcy: '',
+      family: { numChildren: 1, residence: 'Pakistan', nationality: 'Pakistan', repCcy: 'USD',
         coverage: DATA0.assumptions.coverageDefault * 100, ret: null, savInc: DATA0.assumptions.savingsIncreaseDefault * 100 },
       fx: {},
       children: [0, 1, 2, 3].map(kidDefaults),
@@ -120,7 +120,7 @@
   let state = freshState();
   let step = 1;
   let lastFamily = null;
-  let blank = false; // true after "Start again" until the parent changes something: results show 0
+  let blank = true; // on opening and after "Start again", until the parent changes something: results show 0
 
   const isNum = (v) => typeof v === 'number' && isFinite(v);
   const activeKids = () => state.children.slice(0, state.family.numChildren);
@@ -666,6 +666,10 @@
   /* ---------- Step 4: compare countries ---------- */
   function renderCompare() {
     const root = clear($('#ec-compare'));
+    if (blank) {
+      root.appendChild(h('p', { class: 'ec-help' }, 'Enter your family and children\'s details in step 1 to compare countries.'));
+      return;
+    }
     const kids = activeKids();
     if (state.compare.child >= kids.length) state.compare.child = 0;
     const idx = state.compare.child;
@@ -709,7 +713,7 @@
       h('thead', null, h('tr', null, [h('th', { scope: 'col' }, 'Country'), h('th', { scope: 'col', class: 'ec-num' }, 'Total estimated education cost (' + ccy + ')'), h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Action'))])),
       body
     ])));
-    root.appendChild(h('p', { class: 'ec-help-block' }, 'Each total covers the full course in that country (its usual length), at future prices, after your scholarship / part-time-work percentage. Your own cost edits are not carried over, because they are in another country\'s currency.'));
+    root.appendChild(h('p', { class: 'ec-help-block' }, 'Each total covers the full course in that country (its usual length), at future prices, after your scholarship / part-time-work percentage. The current plan\'s row is your plan exactly. For other countries your own fee and living-cost increases are used, but your own cost edits are not carried over, because they are in another country\'s currency.'));
   }
 
   /* ---------- update cycle ---------- */
@@ -888,7 +892,7 @@
     s.family.numChildren = num(f.numChildren, 1, 4) || 1;
     if (PLACES.indexOf(f.residence) !== -1) s.family.residence = f.residence;
     if (PLACES.indexOf(f.nationality) !== -1) s.family.nationality = f.nationality;
-    if (DATA0.currencies.indexOf(f.repCcy) !== -1) s.family.repCcy = f.repCcy;
+    if (f.repCcy === '' || DATA0.currencies.indexOf(f.repCcy) !== -1) s.family.repCcy = f.repCcy;
     s.family.coverage = num(f.coverage, 0, 100) || 0;
     s.family.ret = num(f.ret, -50, 30);
     s.family.savInc = num(f.savInc, 0, 20) || 0;

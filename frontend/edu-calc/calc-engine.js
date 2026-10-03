@@ -470,8 +470,12 @@
      (duration, fees, living costs, visa, travel and inflation). The parent's own cost edits
      are in another currency and are not carried over. */
   function compareCountries(data, child, family, a, countries) {
+    // The plan's own country is the plan itself, so its total matches the results exactly. Other countries use their
+    // own fees and course length; the parent's own cost edits are not carried over (another currency), but fee and
+    // living-cost increases the parent set are, because they are percentages.
     return countries.map((country) => {
-      const copy = Object.assign({}, child, { country, overrides: {}, duration: null, tuitionInflation: null, livingInflation: null });
+      const copy = country === child.country ? child
+        : Object.assign({}, child, { country, overrides: {}, duration: null });
       const res = projectChild(data, copy, family, a);
       if (!res.ok) return { country, available: false, reason: res.errors[0] };
       return { country, available: true, totalCost: res.summary.totalCost, duration: res.duration.used,

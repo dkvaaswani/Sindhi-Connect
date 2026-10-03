@@ -45,6 +45,15 @@ rows. A 3-child GBP plan with 6% return, 25% scholarship and 3% savings increase
 and chains, Σ expenses = total on screen = total in print. After "Start again" the dashboard, printed report and CSV
 show no figures until details are entered; entering a detail brings them back. No horizontal page scroll at 375 px.
 
+## Comparison, default currency and opening state — added 3 October 2026
+
+- New engine test: the current country's comparison row equals the plan total even with own cost edits and 0% fee
+  and living-cost increases; other countries keep the parent's percentages but not the cost edits. 12/12 tests pass.
+- Page: 1 child, Computer Science in Pakistan, 0% increases and an edited tuition figure: "Current plan" row =
+  plan total in USD (USD 23,562) and in PKR (PKR 6,529,081). Previously the row ignored the edits and increases.
+- On opening: currency USD; dashboard, results and comparison show USD 0 / no figures until a detail is changed.
+  "Start again" returns to the same state.
+
 ## Page — manual and scripted in the browser
 
 | Check | Result |

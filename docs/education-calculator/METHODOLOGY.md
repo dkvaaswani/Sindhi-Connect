@@ -117,13 +117,17 @@ immediately the "amount needed now" is shown instead, in plain language.
   so year 1's cost (which includes one-time admission and relocation costs) is the amount needed now; the end-of-year
   savings in years 1–3 each pay the following year's (equal) cost, so the yearly saving equals one regular year's cost
   and nothing is left at the end.
-- **Compare countries** — the same child and qualification in each chosen country, using that country's own fees,
-  living costs, course length, visa, travel and default price rises; the parent's own cost edits are not carried over.
+- **Compare countries** — the plan's own country row is the plan itself (same total as the results). Other countries:
+  the same child and qualification using that country's own fees,
+  living costs, course length, visa and travel; the parent's own fee and living-cost increases are used if set (else
+  the country defaults), but the parent's own cost edits are not carried over (another currency).
 
 ## 9. Defaults
 
 | Assumption | Default | Source |
 |---|---|---|
+| Results currency | USD (the parent can choose another, or "Automatic" = Child 1's study country) | — |
+| On opening / after "Start again" | results, report, CSV and comparison show 0 until the parent changes a detail | — |
 | College-entry age | 18 | — |
 | Scholarship / part-time work | 0% | — |
 | Investment return | by reporting currency (PKR 12%, INR 10%, USD 6%, GBP 5%, EUR 5%, AUD 6%) | planning assumption, `assumptions.returnsByCurrency` |
