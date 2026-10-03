@@ -229,6 +229,7 @@ label.ec-btn-outline:focus-within { outline: 3px solid var(--gold); outline-offs
   .ec-print table { width: 100%; border-collapse: collapse; margin: 4pt 0; }
   .ec-print th, .ec-print td { border: 1px solid #999; padding: 2pt 4pt; text-align: left; font-size: 9pt; }
   .ec-print-note { font-size: 8.5pt; color: #333; }
+  .ec-print thead th:nth-child(n+3), .ec-print tbody td:nth-child(n+3) { text-align: right; }
   .ec-print tr { page-break-inside: avoid; }
 }
 

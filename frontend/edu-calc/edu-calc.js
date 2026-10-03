@@ -622,23 +622,44 @@
     return h('figure', { class: 'ec-figure' }, [g, legend]);
   }
 
+  // Columns shared by the on-screen plan, the printed report and the CSV export
+  const SCHEDULE_COLS = ['Year', 'Studying', 'Opening fund', 'Family savings added', 'Investment growth', 'Education expenses', 'Closing fund'];
+  const fundAmount = (v) => (Math.abs(v) < 0.5 ? 0 : v); // hide rounding dust such as -0.0001
+  function scheduleValues(y) {
+    return [fundAmount(y.opening), fundAmount(y.saving), fundAmount(y.growth), fundAmount(y.expense), fundAmount(y.fund)];
+  }
+
+  function scheduleNotes(fam, ccy) {
+    const t = fam.totals;
+    const notes = [];
+    if (t.lumpNow > 0.5) {
+      notes.push('The opening fund in ' + academic(DATA0.planStartYear) + ' is the amount needed now (' + money(t.lumpNow, ccy) +
+        '): costs that start before any yearly saving can be made. The plan assumes no existing savings.');
+    } else {
+      notes.push('The plan assumes no existing savings, so the fund starts at zero.');
+    }
+    notes.push('Each year: opening fund − education expenses (paid at the start of the year) + investment growth + family savings ' +
+      '(added at the end of the year) = closing fund, which becomes the next year\'s opening fund.');
+    notes.push('Adds up: ' + money(t.lumpNow, ccy) + ' needed now + ' + money(t.totalSaved, ccy) + ' family savings + ' +
+      money(t.totalGrowth, ccy) + ' investment growth − ' + money(t.totalCost, ccy) + ' education expenses = ' +
+      money(fundAmount(t.finalFund), ccy) + ' left at the end.');
+    return notes;
+  }
+
   function schedule(fam, ccy) {
     const rows = fam.years.map((y) => h('tr', { class: y.studying.length ? 'is-study' : null }, [
       h('th', { scope: 'row' }, academic(y.year)),
       h('td', null, y.studying.length ? y.studying.map((i) => childName(state.children[i], i)).join(', ') : '—'),
-      h('td', { class: 'ec-num' }, y.expense > 0.5 ? money(y.expense, ccy) : '—'),
-      h('td', { class: 'ec-num' }, y.saving > 0.5 ? money(y.saving, ccy) : '—'),
-      h('td', { class: 'ec-num' }, money(Math.max(0, y.fund), ccy))
+      ...scheduleValues(y).map((v) => h('td', { class: 'ec-num' }, v === 0 ? '—' : money(v, ccy)))
     ]));
     return h('details', { class: 'ec-schedule', open: fam.years.length <= 12 }, [
       h('summary', null, 'Year-by-year plan (' + fam.years.length + ' years)'),
-      h('p', { class: 'ec-help-block' }, 'This table shows when education expenses may occur and how much the family may need to save in each year.'),
+      h('p', { class: 'ec-help-block' }, 'How the education fund builds up and is spent each year.'),
       h('div', { class: 'ec-table-wrap ec-scroll' }, h('table', { class: 'ec-table' }, [
-        h('thead', null, h('tr', null, ['Year', 'Child or children studying', 'Estimated education expenses', 'Suggested family savings', 'Remaining education fund']
-          .map((t, k) => h('th', { scope: 'col', class: k > 1 ? 'ec-num' : null }, t)))),
+        h('thead', null, h('tr', null, SCHEDULE_COLS.map((t, k) => h('th', { scope: 'col', class: k > 1 ? 'ec-num' : null }, t)))),
         h('tbody', null, rows)
       ])),
-      h('p', { class: 'ec-help' }, 'Expenses are paid at the start of each year and savings are added at the end, so the remaining fund is the balance after that year\'s saving.')
+      ...scheduleNotes(fam, ccy).map((n) => h('p', { class: 'ec-help' }, n))
     ]);
   }
 
@@ -832,6 +853,11 @@
   function csv() {
     const fam = lastFamily || compute();
     const ccy = reportingCurrency();
+    if (blank) {
+      download('education-fund-plan.csv', [['Children\'s Future Education Fund — plan (' + ccy + ')'], [],
+        ['No plan entered yet. Enter your family and children\'s details first.']].map((r) => r.map(csvCell).join(',')).join('\n'), 'text/csv');
+      return;
+    }
     const lines = [['Children\'s Future Education Fund — plan (' + ccy + ')'], [],
       ['Total education fund required', Math.round(fam.totals.totalCost)],
       ['Required yearly savings (this year)', Math.round(fam.totals.firstYearSaving)],
@@ -841,9 +867,11 @@
       const c = state.children[i];
       lines.push([childName(c, i), c.country, c.qualification, k.ok ? k.summary.yearsToCollege : '', k.ok ? Math.round(k.summary.totalCost) : 'not calculated']);
     });
-    lines.push([], ['Year', 'Children studying', 'Estimated education expenses', 'Suggested family savings', 'Remaining education fund']);
-    fam.years.forEach((y) => lines.push([academic(y.year), y.studying.map((i) => childName(state.children[i], i)).join('; '),
-      Math.round(y.expense), Math.round(y.saving), Math.round(Math.max(0, y.fund))]));
+    lines.push([], SCHEDULE_COLS);
+    fam.years.forEach((y) => lines.push([academic(y.year), y.studying.map((i) => childName(state.children[i], i)).join('; ')]
+      .concat(scheduleValues(y).map(Math.round))));
+    lines.push([]);
+    scheduleNotes(fam, ccy).forEach((n) => lines.push([n]));
     download('education-fund-plan.csv', lines.map((r) => r.map(csvCell).join(',')).join('\n'), 'text/csv');
   }
 
@@ -951,6 +979,11 @@
     const fam = lastFamily || compute();
     const ccy = reportingCurrency();
     const a = assumptions();
+    if (blank) {
+      root.append(h('h1', null, 'Children\'s Future Education Fund — plan'),
+        h('p', null, 'No plan entered yet. Enter your family and children\'s details in the calculator first.'));
+      return;
+    }
     root.append(
       h('h1', null, 'Children\'s Future Education Fund — plan'),
       h('p', null, 'Prepared ' + new Date().toLocaleDateString('en-GB') + ' with the Sindhi Connect calculator. Amounts in ' + ccy + '.'),
@@ -973,9 +1006,10 @@
         ' a year, living costs ' + pct(k.costs.livingInflation) + ' a year.'));
     });
     root.appendChild(h('h2', null, 'Year-by-year plan'));
-    root.appendChild(h('table', null, [h('thead', null, h('tr', null, ['Year', 'Studying', 'Education expenses', 'Family savings', 'Remaining fund'].map((x) => h('th', null, x)))),
-      h('tbody', null, fam.years.map((y) => h('tr', null, [academic(y.year), y.studying.map((i) => childName(state.children[i], i)).join(', '),
-        plain(y.expense), plain(y.saving), plain(Math.max(0, y.fund))].map((v) => h('td', null, String(v))))))]));
+    root.appendChild(h('table', null, [h('thead', null, h('tr', null, SCHEDULE_COLS.map((x) => h('th', null, x)))),
+      h('tbody', null, fam.years.map((y) => h('tr', null, [academic(y.year), y.studying.map((i) => childName(state.children[i], i)).join(', ')]
+        .concat(scheduleValues(y).map(plain)).map((v) => h('td', null, String(v))))))]));
+    scheduleNotes(fam, ccy).forEach((n) => root.appendChild(h('p', { class: 'ec-print-note' }, n)));
   }
 
   /* ---------- init ---------- */
