@@ -26,6 +26,8 @@ The site is one `index.html`. The menu shows one "page" at a time (sections grou
 
 ## Updating content
 
+Step-by-step guide for making changes on the GitHub website, no coding needed: [docs/HOW-TO-UPDATE.md](docs/HOW-TO-UPDATE.md).
+
 - **Articles, books, PDFs, videos, podcasts:** add an entry to `frontend/resources.js` (instructions are at the top of the file). One entry automatically appears in the Knowledge Hub, the right Resources section (by `type`), the home page (if `featured`), and the Videos & Podcasts page (if `type` is Video or Podcast). Put PDFs and cover images in `frontend/assets/resources/`.
 - **Everything else:** edit `frontend/index.html`.
 
