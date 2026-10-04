@@ -1007,6 +1007,25 @@ main [data-page]:focus { outline: none; }
 .footer-name { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 600; color: var(--white); }
 .footer-script { margin-top: var(--s-1); font-size: var(--fs-lg); color: var(--gold); text-align: left; }
 .footer-tag { margin-top: var(--s-2); font-size: var(--fs-sm); }
+.footer-social { margin-top: var(--s-5); }
+.footer-social-label { font-size: var(--fs-sm); font-weight: 600; color: var(--white); }
+.social-links { display: flex; gap: var(--s-3); margin: var(--s-3) 0 0; padding: 0; list-style: none; }
+.social-links a {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--ink-line);
+  border-radius: 50%;
+  color: var(--muted-dark);
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.social-links a:hover, .social-links a:focus-visible { background: var(--gold); border-color: var(--gold); color: var(--ink); }
+.social-links a:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.social-links svg { width: 18px; height: 18px; }
+.social-fill { fill: currentColor; }
+.social-line { fill: none; stroke: currentColor; stroke-width: 1.8; }
+.social-line .social-dot { fill: currentColor; stroke: none; }
 .footer-links {
   display: flex;
   flex-wrap: wrap;
