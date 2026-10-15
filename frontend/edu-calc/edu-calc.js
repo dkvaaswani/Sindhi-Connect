@@ -841,48 +841,6 @@
     el.textContent = msg;
   }
 
-  function download(name, text, type) {
-    const url = URL.createObjectURL(new Blob([text], { type }));
-    const a = h('a', { href: url, download: name });
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
-  }
-
-  function csvCell(v) {
-    const s = String(v === null || v === undefined ? '' : v);
-    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-
-  function csv() {
-    const fam = lastFamily || compute();
-    const ccy = reportingCurrency();
-    if (blank) {
-      download('education-fund-plan.csv', [['Children\'s Future Education Fund — plan (' + ccy + ')'], [],
-        ['No plan entered yet. Enter your family and children\'s details first.']].map((r) => r.map(csvCell).join(',')).join('\n'), 'text/csv');
-      return;
-    }
-    const lines = [['Children\'s Future Education Fund — plan (' + ccy + ')'], [],
-      ['Total education fund required', Math.round(fam.totals.totalCost)],
-      ['Required yearly savings (this year)', Math.round(fam.totals.firstYearSaving)],
-      ['Amount needed now', Math.round(fam.totals.lumpNow)], [],
-      ['Child', 'Country', 'Qualification', 'Education starts in (years)', 'Total estimated education cost']];
-    fam.children.forEach((k, i) => {
-      const c = state.children[i];
-      lines.push([childName(c, i), c.country, c.qualification, k.ok ? k.summary.yearsToCollege : '', k.ok ? Math.round(k.summary.totalCost) : 'not calculated']);
-    });
-    lines.push([], SCHEDULE_COLS);
-    fam.years.forEach((y) => lines.push([academic(y.year), y.studying.map((i) => childName(state.children[i], i)).join('; ')]
-      .concat(scheduleValues(y).map(Math.round))));
-    lines.push([]);
-    scheduleNotes(fam, ccy).forEach((n) => lines.push([n]));
-    download('education-fund-plan.csv', lines.map((r) => r.map(csvCell).join(',')).join('\n'), 'text/csv');
-  }
-
-  function backup() {
-    download('education-fund-plan.json', JSON.stringify({ app: 'sindhi-connect-education-calculator', version: 2, state }, null, 1), 'application/json');
-  }
-
   // Accept only known fields with sensible values from a loaded file
   function sanitize(raw) {
     const s = freshState();
@@ -923,22 +881,6 @@
     refresh(true);
   }
 
-  function onLoadFile(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    if (file.size > 200000) { status('That file is too large to be a calculator backup.', false); return; }
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const raw = JSON.parse(reader.result);
-        if (raw.app !== 'sindhi-connect-education-calculator' || raw.version !== 2) throw new Error('not ours');
-        loadState(sanitize(raw.state)); goTo(5); status('Backup loaded.', true);
-      } catch (err) { status('This file is not a backup from this version of the calculator.', false); }
-      e.target.value = '';
-    };
-    reader.readAsText(file);
-  }
-
   function onClick(e) {
     const t = e.target.closest('button, [data-goto]');
     if (!t) return;
@@ -963,11 +905,9 @@
       refresh(true);
       renderCompare();
     } else if (act === 'print') window.print();
-    else if (act === 'csv') csv();
-    else if (act === 'json') backup();
     else if (act === 'save') {
       try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); status('Plan saved in this browser.', true); }
-      catch (err) { status('This browser did not allow saving. Use "Download backup" instead.', false); }
+      catch (err) { status('This browser did not allow saving. Use "Print report" to keep a copy instead.', false); }
     } else if (act === 'restore') {
       try {
         const raw = localStorage.getItem(STORE_KEY);
@@ -1029,7 +969,6 @@
     form.addEventListener('change', onInput);
     document.addEventListener('click', onClick);
     dialog.addEventListener('cancel', () => { dialogReturn = $('[data-action="reset"]'); });
-    $('#ec-load').addEventListener('change', onLoadFile);
     window.addEventListener('beforeprint', buildPrint);
     goTo(1);
   }

@@ -120,7 +120,7 @@ immediately the "amount needed now" is shown instead, in plain language.
   (incl. admission), and visa/application/travel/relocation; the parts add up to the total.
 - **Chart** — one bar series per child (that child's costs in each year) and one line for the family's required saving
   that year (not a cumulative balance).
-- **Year-by-year plan** — a fund roll-forward per year (same columns on screen, in the printed report and in the CSV):
+- **Year-by-year plan** — a fund roll-forward per year (same columns on screen and in the printed report):
   opening fund, family savings added, investment growth, education expenses, closing fund, where
   `closing = opening − expenses + growth + savings` and `growth = (opening − expenses) × r` (costs at the start of the
   year, savings at the end). Each year's closing fund is the next year's opening fund. The plan assumes **no existing
@@ -141,7 +141,7 @@ immediately the "amount needed now" is shown instead, in plain language.
 | Assumption | Default | Source |
 |---|---|---|
 | Results currency | USD (the parent can choose another, or "Automatic" = Child 1's study country) | — |
-| On opening / after "Start again" | results, report, CSV and comparison show 0 until the parent changes a detail | — |
+| On opening / after "Start again" | results, printed report and comparison show 0 until the parent changes a detail | — |
 | College-entry age | 18 | — |
 | Scholarship / part-time work | 0% | — |
 | Investment return | by reporting currency (PKR 12%, INR 10%, USD 6%, GBP 5%, EUR 5%, AUD 6%) | planning assumption, `assumptions.returnsByCurrency` |
