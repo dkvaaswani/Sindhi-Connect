@@ -1,57 +1,444 @@
 {
   "note": "Excel-vs-web parity scenarios (method v2). Rates are decimals. ret null = default return for the results currency. repCcy 'Automatic' = Child 1's study-country currency.",
   "scenarios": [
-    { "name": "worked example: Computer Science in Pakistan, all rates 0%, PKR",
-      "family": { "numChildren": 1, "residence": "Pakistan", "nationality": "Pakistan", "repCcy": "PKR", "coverage": 0, "ret": 0, "savInc": 0 },
-      "children": [ { "age": 18, "entryAge": 18, "country": "Pakistan", "qualification": "Computer Science", "tInf": 0, "lInf": 0 } ] },
-    { "name": "UK Law, Pakistani living in Qatar, GBP, default return",
-      "family": { "numChildren": 1, "residence": "Qatar", "nationality": "Pakistan", "repCcy": "GBP", "coverage": 0, "ret": null, "savInc": 0 },
-      "children": [ { "age": 10, "entryAge": 18, "country": "UK", "qualification": "Law" } ] },
-    { "name": "USA Medicine (pre-medical stage), USD, 6% return, 3% savings increase",
-      "family": { "numChildren": 1, "residence": "United Arab Emirates", "nationality": "Pakistan", "repCcy": "USD", "coverage": 0, "ret": 0.06, "savInc": 0.03 },
-      "children": [ { "age": 9, "entryAge": 18, "country": "USA", "qualification": "Medicine (MBBS/MD)" } ] },
-    { "name": "India MBBS 4.5 years, Indian at home, INR",
-      "family": { "numChildren": 1, "residence": "India", "nationality": "India", "repCcy": "INR", "coverage": 0, "ret": null, "savInc": 0 },
-      "children": [ { "age": 12, "entryAge": 18, "country": "India", "qualification": "Medicine (MBBS/MD)" } ] },
-    { "name": "4 children, mixed countries, USD, 6% return, 25% scholarship, 3% increase",
-      "family": { "numChildren": 4, "residence": "United Arab Emirates", "nationality": "Pakistan", "repCcy": "USD", "coverage": 0.25, "ret": 0.06, "savInc": 0.03 },
+    {
+      "name": "worked example: Computer Science in Pakistan, all rates 0%, PKR",
+      "family": {
+        "numChildren": 1,
+        "residence": "Pakistan",
+        "nationality": "Pakistan",
+        "repCcy": "PKR",
+        "coverage": 0,
+        "ret": 0,
+        "savInc": 0
+      },
       "children": [
-        { "age": 15, "entryAge": 18, "country": "UK", "qualification": "Computer Science" },
-        { "age": 11, "entryAge": 18, "country": "Germany", "qualification": "Engineering" },
-        { "age": 6, "entryAge": 18, "country": "Australia", "qualification": "Business Administration" },
-        { "age": 1, "entryAge": 18, "country": "Pakistan", "qualification": "Medicine (MBBS/MD)" } ] },
-    { "name": "Automatic currency, German student in Germany",
-      "family": { "numChildren": 1, "residence": "Germany", "nationality": "Germany", "repCcy": "Automatic", "coverage": 0, "ret": null, "savInc": 0 },
-      "children": [ { "age": 7, "entryAge": 19, "country": "Germany", "qualification": "Computer Science" } ] },
-    { "name": "own cost figures and own increases, UK international",
-      "family": { "numChildren": 1, "residence": "Pakistan", "nationality": "Pakistan", "repCcy": "PKR", "coverage": 0.1, "ret": 0.08, "savInc": 0.05 },
-      "children": [ { "age": 13, "entryAge": 18, "country": "UK", "qualification": "Accounting and Finance", "tInf": 0.06, "lInf": 0.04,
-        "overrides": { "tuition": 21000, "accommodation": 8000, "travelRelocation": 900 } } ] },
-    { "name": "Australia Nursing, Indian at home, AUD, 100% scholarship",
-      "family": { "numChildren": 1, "residence": "India", "nationality": "India", "repCcy": "AUD", "coverage": 1, "ret": null, "savInc": 0 },
-      "children": [ { "age": 14, "entryAge": 18, "country": "Australia", "qualification": "Nursing" } ] },
-    { "name": "one course not offered (CPA in the UK) and one valid child",
-      "family": { "numChildren": 2, "residence": "UK", "nationality": "UK", "repCcy": "GBP", "coverage": 0, "ret": null, "savInc": 0 },
+        {
+          "age": 18,
+          "entryAge": 18,
+          "country": "Pakistan",
+          "qualification": "Computer Science",
+          "tInf": 0,
+          "lInf": 0
+        }
+      ]
+    },
+    {
+      "name": "UK Law, Pakistani living in Qatar, GBP, default return",
+      "family": {
+        "numChildren": 1,
+        "residence": "Qatar",
+        "nationality": "Pakistan",
+        "repCcy": "GBP",
+        "coverage": 0,
+        "ret": null,
+        "savInc": 0
+      },
       "children": [
-        { "age": 10, "entryAge": 18, "country": "UK", "qualification": "CPA" },
-        { "age": 8, "entryAge": 18, "country": "UK", "qualification": "Dentistry" } ] },
-    { "name": "already at college age, 12% return",
-      "family": { "numChildren": 1, "residence": "Pakistan", "nationality": "Pakistan", "repCcy": "PKR", "coverage": 0, "ret": 0.12, "savInc": 0 },
-      "children": [ { "age": 18, "entryAge": 18, "country": "Pakistan", "qualification": "Pharmacy" } ] },
-    { "name": "late entry age 21, USA Dentistry pre-stage, own exchange rate",
-      "family": { "numChildren": 1, "residence": "Saudi Arabia", "nationality": "India", "repCcy": "INR", "coverage": 0, "ret": 0.05, "savInc": 0 },
-      "fx": { "INR": 90 },
-      "children": [ { "age": 5, "entryAge": 21, "country": "USA", "qualification": "Dentistry" } ] },
-    { "name": "ACCA in Pakistan (fixed estimate in GBP), negative return",
-      "family": { "numChildren": 1, "residence": "Pakistan", "nationality": "Pakistan", "repCcy": "PKR", "coverage": 0, "ret": -0.02, "savInc": 0 },
-      "children": [ { "age": 16, "entryAge": 18, "country": "Pakistan", "qualification": "ACCA" } ] },
-    { "name": "USA CPA (pre-stage), Australian CA, compare child 2",
-      "family": { "numChildren": 2, "residence": "USA", "nationality": "USA", "repCcy": "USD", "coverage": 0, "ret": null, "savInc": 0 }, "cmpChild": 2,
+        {
+          "age": 10,
+          "entryAge": 18,
+          "country": "UK",
+          "qualification": "Law"
+        }
+      ]
+    },
+    {
+      "name": "USA Medicine (pre-medical stage), USD, 6% return, 3% savings increase",
+      "family": {
+        "numChildren": 1,
+        "residence": "United Arab Emirates",
+        "nationality": "Pakistan",
+        "repCcy": "USD",
+        "coverage": 0,
+        "ret": 0.06,
+        "savInc": 0.03
+      },
       "children": [
-        { "age": 17, "entryAge": 18, "country": "USA", "qualification": "CPA" },
-        { "age": 4, "entryAge": 18, "country": "Australia", "qualification": "Chartered Accountancy (CA)" } ] },
-    { "name": "blank start: nothing entered",
-      "family": { "numChildren": 1, "residence": "Pakistan", "nationality": "Pakistan", "repCcy": "USD", "coverage": 0, "ret": null, "savInc": 0 },
-      "children": [ { "entryAge": 18 } ] }
+        {
+          "age": 9,
+          "entryAge": 18,
+          "country": "USA",
+          "qualification": "Medicine (MBBS/MD)"
+        }
+      ]
+    },
+    {
+      "name": "India MBBS 4.5 years, Indian at home, INR",
+      "family": {
+        "numChildren": 1,
+        "residence": "India",
+        "nationality": "India",
+        "repCcy": "INR",
+        "coverage": 0,
+        "ret": null,
+        "savInc": 0
+      },
+      "children": [
+        {
+          "age": 12,
+          "entryAge": 18,
+          "country": "India",
+          "qualification": "Medicine (MBBS/MD)"
+        }
+      ]
+    },
+    {
+      "name": "4 children, mixed countries, USD, 6% return, 25% scholarship, 3% increase",
+      "family": {
+        "numChildren": 4,
+        "residence": "United Arab Emirates",
+        "nationality": "Pakistan",
+        "repCcy": "USD",
+        "coverage": 0.25,
+        "ret": 0.06,
+        "savInc": 0.03
+      },
+      "children": [
+        {
+          "age": 15,
+          "entryAge": 18,
+          "country": "UK",
+          "qualification": "Computer Science"
+        },
+        {
+          "age": 11,
+          "entryAge": 18,
+          "country": "Germany",
+          "qualification": "Engineering"
+        },
+        {
+          "age": 6,
+          "entryAge": 18,
+          "country": "Australia",
+          "qualification": "Business Administration"
+        },
+        {
+          "age": 1,
+          "entryAge": 18,
+          "country": "Pakistan",
+          "qualification": "Medicine (MBBS/MD)"
+        }
+      ]
+    },
+    {
+      "name": "Automatic currency, German student in Germany",
+      "family": {
+        "numChildren": 1,
+        "residence": "Germany",
+        "nationality": "Germany",
+        "repCcy": "Automatic",
+        "coverage": 0,
+        "ret": null,
+        "savInc": 0
+      },
+      "children": [
+        {
+          "age": 7,
+          "entryAge": 19,
+          "country": "Germany",
+          "qualification": "Computer Science"
+        }
+      ]
+    },
+    {
+      "name": "own cost figures and own increases, UK international",
+      "family": {
+        "numChildren": 1,
+        "residence": "Pakistan",
+        "nationality": "Pakistan",
+        "repCcy": "PKR",
+        "coverage": 0.1,
+        "ret": 0.08,
+        "savInc": 0.05
+      },
+      "children": [
+        {
+          "age": 13,
+          "entryAge": 18,
+          "country": "UK",
+          "qualification": "Accounting and Finance",
+          "tInf": 0.06,
+          "lInf": 0.04,
+          "overrides": {
+            "tuition": 21000,
+            "accommodation": 8000,
+            "travelRelocation": 900
+          }
+        }
+      ]
+    },
+    {
+      "name": "Australia Nursing, Indian at home, AUD, 100% scholarship",
+      "family": {
+        "numChildren": 1,
+        "residence": "India",
+        "nationality": "India",
+        "repCcy": "AUD",
+        "coverage": 1,
+        "ret": null,
+        "savInc": 0
+      },
+      "children": [
+        {
+          "age": 14,
+          "entryAge": 18,
+          "country": "Australia",
+          "qualification": "Nursing"
+        }
+      ]
+    },
+    {
+      "name": "one course not offered (CPA in the UK) and one valid child",
+      "family": {
+        "numChildren": 2,
+        "residence": "UK",
+        "nationality": "UK",
+        "repCcy": "GBP",
+        "coverage": 0,
+        "ret": null,
+        "savInc": 0
+      },
+      "children": [
+        {
+          "age": 10,
+          "entryAge": 18,
+          "country": "UK",
+          "qualification": "CPA"
+        },
+        {
+          "age": 8,
+          "entryAge": 18,
+          "country": "UK",
+          "qualification": "Dentistry"
+        }
+      ]
+    },
+    {
+      "name": "already at college age, 12% return",
+      "family": {
+        "numChildren": 1,
+        "residence": "Pakistan",
+        "nationality": "Pakistan",
+        "repCcy": "PKR",
+        "coverage": 0,
+        "ret": 0.12,
+        "savInc": 0
+      },
+      "children": [
+        {
+          "age": 18,
+          "entryAge": 18,
+          "country": "Pakistan",
+          "qualification": "Pharmacy"
+        }
+      ]
+    },
+    {
+      "name": "late entry age 21, USA Dentistry pre-stage, own exchange rate",
+      "family": {
+        "numChildren": 1,
+        "residence": "Saudi Arabia",
+        "nationality": "India",
+        "repCcy": "INR",
+        "coverage": 0,
+        "ret": 0.05,
+        "savInc": 0
+      },
+      "fx": {
+        "INR": 90
+      },
+      "children": [
+        {
+          "age": 5,
+          "entryAge": 21,
+          "country": "USA",
+          "qualification": "Dentistry"
+        }
+      ]
+    },
+    {
+      "name": "ACCA in Pakistan (fixed estimate in GBP), negative return",
+      "family": {
+        "numChildren": 1,
+        "residence": "Pakistan",
+        "nationality": "Pakistan",
+        "repCcy": "PKR",
+        "coverage": 0,
+        "ret": -0.02,
+        "savInc": 0
+      },
+      "children": [
+        {
+          "age": 16,
+          "entryAge": 18,
+          "country": "Pakistan",
+          "qualification": "ACCA"
+        }
+      ]
+    },
+    {
+      "name": "USA CPA (pre-stage), Australian CA, compare child 2",
+      "family": {
+        "numChildren": 2,
+        "residence": "USA",
+        "nationality": "USA",
+        "repCcy": "USD",
+        "coverage": 0,
+        "ret": null,
+        "savInc": 0
+      },
+      "cmpChild": 2,
+      "children": [
+        {
+          "age": 17,
+          "entryAge": 18,
+          "country": "USA",
+          "qualification": "CPA"
+        },
+        {
+          "age": 4,
+          "entryAge": 18,
+          "country": "Australia",
+          "qualification": "Chartered Accountancy (CA)"
+        }
+      ]
+    },
+    {
+      "name": "Singapore Medicine, Indian family in India, SGD",
+      "family": {
+        "numChildren": 1,
+        "residence": "India",
+        "nationality": "India",
+        "repCcy": "SGD",
+        "coverage": 0,
+        "ret": null,
+        "savInc": 0
+      },
+      "children": [
+        {
+          "age": 13,
+          "entryAge": 18,
+          "country": "Singapore",
+          "qualification": "Medicine (MBBS/MD)"
+        }
+      ]
+    },
+    {
+      "name": "Malaysia Computer Science and Ireland Psychology (EU fees for a UK national), USD",
+      "family": {
+        "numChildren": 2,
+        "residence": "UK",
+        "nationality": "UK",
+        "repCcy": "USD",
+        "coverage": 0.1,
+        "ret": 0.05,
+        "savInc": 0.02
+      },
+      "children": [
+        {
+          "age": 9,
+          "entryAge": 18,
+          "country": "Malaysia",
+          "qualification": "Computer Science"
+        },
+        {
+          "age": 16,
+          "entryAge": 18,
+          "country": "Ireland",
+          "qualification": "Psychology"
+        }
+      ]
+    },
+    {
+      "name": "Pakistani family living in Qatar: Qatar Engineering (no visa) and UAE Dentistry",
+      "family": {
+        "numChildren": 2,
+        "residence": "Qatar",
+        "nationality": "Pakistan",
+        "repCcy": "QAR",
+        "coverage": 0,
+        "ret": null,
+        "savInc": 0
+      },
+      "cmpChild": 1,
+      "children": [
+        {
+          "age": 11,
+          "entryAge": 18,
+          "country": "Qatar",
+          "qualification": "Engineering"
+        },
+        {
+          "age": 7,
+          "entryAge": 18,
+          "country": "United Arab Emirates",
+          "qualification": "Dentistry"
+        }
+      ]
+    },
+    {
+      "name": "Indian family living in the UAE: UAE Medicine (no visa), compare all 11 countries, AED",
+      "family": {
+        "numChildren": 1,
+        "residence": "United Arab Emirates",
+        "nationality": "India",
+        "repCcy": "AED",
+        "coverage": 0.25,
+        "ret": 0.05,
+        "savInc": 0.03
+      },
+      "children": [
+        {
+          "age": 5,
+          "entryAge": 18,
+          "country": "United Arab Emirates",
+          "qualification": "Medicine (MBBS/MD)"
+        }
+      ]
+    },
+    {
+      "name": "Emirati citizen at a UAE public university (no tuition) and Singapore CA with pre-stage",
+      "family": {
+        "numChildren": 2,
+        "residence": "United Arab Emirates",
+        "nationality": "United Arab Emirates",
+        "repCcy": "USD",
+        "coverage": 0,
+        "ret": null,
+        "savInc": 0
+      },
+      "children": [
+        {
+          "age": 14,
+          "entryAge": 18,
+          "country": "United Arab Emirates",
+          "qualification": "Law"
+        },
+        {
+          "age": 10,
+          "entryAge": 18,
+          "country": "Singapore",
+          "qualification": "Chartered Accountancy (CA)"
+        }
+      ]
+    },
+    {
+      "name": "blank start: nothing entered",
+      "family": {
+        "numChildren": 1,
+        "residence": "Pakistan",
+        "nationality": "Pakistan",
+        "repCcy": "USD",
+        "coverage": 0,
+        "ret": null,
+        "savInc": 0
+      },
+      "children": [
+        {
+          "entryAge": 18
+        }
+      ]
+    }
   ]
 }

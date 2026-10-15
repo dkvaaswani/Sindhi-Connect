@@ -45,6 +45,21 @@ rows. A 3-child GBP plan with 6% return, 25% scholarship and 3% savings increase
 and chains, Σ expenses = total on screen = total in print. After "Start again" the dashboard, printed report and CSV
 show no figures until details are entered; entering a detail brings them back. No horizontal page scroll at 375 px.
 
+## Five new study countries — added 15 October 2026
+
+Singapore, Malaysia, Ireland, Qatar and the United Arab Emirates added to the dataset (172 fee records, living costs,
+visas, travel, course lengths, fee-increase evidence; sources in SOURCES.md), the web page, the Excel workbook and the
+comparison (now 11 countries).
+
+| Check | Result |
+|---|---|
+| Engine tests (14, incl. new: Qatar/UAE residents need no student visa, the rule does not apply to the UK; Ireland EU fees for UK nationals; Qatari citizens pay no public tuition; Singapore figures are published, in SGD) | 14/14 pass |
+| Every course in all 11 countries has a published or estimated fee for Pakistani, UK, German and US nationals | pass |
+| Each new country's fee records use one currency, so all its universities are averaged (Qatar's branch campuses entered in QAR) | pass |
+| Excel vs web: 19 scenarios (5 new: Singapore Medicine in SGD; Malaysia CS + Ireland Psychology for a UK family; a Pakistani family in Qatar with Qatar Engineering and UAE Dentistry; an Indian family in the UAE with UAE Medicine; an Emirati at a UAE public university + Singapore CA with its pre-stage) — totals, 235 yearly rows, 209 country-comparison rows | 0 mismatches |
+| Page: 11 countries in the dropdowns and the comparison; visa "Not needed" for a Qatar-resident family studying in Qatar | pass |
+| Phone width (375 px), all five steps: no horizontal scrolling. Fixed an older overflow on the Compare step (also on the live site) caused by the hidden "Action" label escaping the table's scroll box | pass |
+
 ## Excel workbook (method v2) — added 3 October 2026
 
 Built with `tools/edu-calc/build.py` (Python 3.14, openpyxl 3.1.5) and recalculated in Microsoft Excel 16 by
