@@ -467,6 +467,17 @@
     );
     const lt = blank ? 'Enter your family and children\'s details to see the figures.' : lumpText(fam);
     if (lt) root.appendChild(h('p', { class: 'ec-rail-lump' }, lt));
+    // with two or more children, each child's own total and this year's saving
+    if (!blank && ok && state.family.numChildren > 1) {
+      root.appendChild(h('p', { class: 'ec-rail-kids-title' }, 'Each child'));
+      fam.children.forEach((k, i) => {
+        const name = childName(state.children[i], i);
+        root.appendChild(h('dl', { class: 'ec-rail-list ec-rail-kid' }, k.ok ? [
+          h('div', { class: 'ec-rail-kid-head' }, [h('dt', null, name), h('dd', null, money(k.summary.totalCost, ccy))]),
+          h('div', null, [h('dt', null, 'Saving this year'), h('dd', null, money(k.rows[0] ? k.rows[0].saving : 0, ccy))])
+        ] : [h('div', { class: 'ec-rail-kid-head' }, [h('dt', null, name), h('dd', null, '—')])]));
+      });
+    }
     if (!blank && problems(fam).length) root.appendChild(h('p', { class: 'ec-rail-warn' }, 'Some information is missing — see Results.'));
     if (step !== 3) root.appendChild(h('button', { type: 'button', class: 'btn btn-primary btn-sm btn-block', 'data-goto': '3' }, 'See full results'));
   }
