@@ -19,8 +19,19 @@ same rules so both give the same answers for the same inputs (see "Excel status"
 ## 2. Fee status (local or international)
 
 `domestic` when the nationality is in the education country's `domesticNationalities` list (Germany: EU/EEA
-nationalities; UK: UK and Ireland; Australia: Australia and New Zealand), otherwise `international`. Residence,
-settled status and scholarships can change real fee status; the calculator says so.
+nationalities; UK: UK and Ireland; Australia: Australia and New Zealand; Ireland: EU/EEA, Swiss and UK nationalities),
+otherwise `international`. Residence, settled status and scholarships can change real fee status; the calculator says so.
+
+Study countries (11): Pakistan, India, USA, UK, Australia, Germany, Singapore, Malaysia, Ireland, Qatar and the United
+Arab Emirates (the last five added 15 October 2026). Country-specific points:
+- **Singapore** — international fees are the MOE Tuition Grant rate (needs 3 years' work in Singapore after graduation);
+  the non-subsidised fee is in each record's note.
+- **Ireland** — the domestic (EU) fee is the €2,500 Student Contribution under the Free Fees Initiative, which also needs
+  3 of the last 5 years' residence in the EU/EEA/Switzerland/UK.
+- **Malaysia** — both Malaysian and international students are shown private-university fees (public universities are
+  much cheaper for citizens but places are limited); international fees include the 6% service tax.
+- **Qatar and the UAE** — citizens are shown as paying no tuition (public universities are free for them); residents of
+  other nationalities pay the published fees, which are the same as for students coming from abroad.
 
 ## 3. Course length
 
@@ -57,8 +68,11 @@ shows "No figure yet — please enter" and contributes 0 until the parent enters
 international students where they differ. Personal spending is not included.
 
 **Visa** — none when the child is a local national; otherwise the destination's official student-visa charge
-(`visas`), with nationality-specific amounts where the official table gives them (Pakistan). The UK Immigration Health
-Surcharge is a yearly health-insurance cost, not a visa cost, so it is not counted twice.
+(`visas`), with nationality-specific amounts where the official table gives them (Pakistan, Singapore, Ireland). For
+Qatar and the UAE (`residentsNoVisa`), no student visa is counted when the family already lives in that country, because
+the child normally keeps the family residence visa. The visa line is the first year's cost; yearly renewals (e.g.
+Ireland's €300 IRP, the UAE's ~AED 1,780) are named in the notes but not added. The UK Immigration Health Surcharge is a
+yearly health-insurance cost, not a visa cost, so it is not counted twice.
 
 **First travel** — `fare(home region → destination) + settling-in allowance`, or a smaller domestic move when residence
 = education country. Day-to-day travel is the separate Local transport line, so travel is never counted twice.

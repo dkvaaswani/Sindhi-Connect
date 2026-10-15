@@ -81,7 +81,7 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
 .ec-link-btn { background: none; border: 0; padding: var(--s-1); font: inherit; font-size: var(--fs-sm); font-weight: 600; color: var(--gold-text); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---------- Tables ---------- */
-.ec-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--white); }
+.ec-table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--white); }
 .ec-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 .ec-table th, .ec-table td { padding: var(--s-2) var(--s-3); text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .ec-table thead th { background: var(--paper); font-weight: 600; color: var(--muted); font-size: .8125rem; }
@@ -363,6 +363,7 @@ label.ec-btn-outline:focus-within { outline: 3px solid var(--gold); outline-offs
   .ec-headline, .ec-breakdown-list { grid-template-columns: 1fr; }
   .ec-big { padding: var(--s-5); }
   .ec-compare-form { grid-template-columns: 1fr; }
+  .ec-compare td .btn { white-space: normal; text-align: left; }
   .ec-coverage { padding: var(--s-4); }
   .ec-coverage-controls { flex-wrap: wrap; }
   .ec-coverage-controls input[type="range"] { flex-basis: 100%; }

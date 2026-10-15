@@ -236,3 +236,29 @@ test('comparison: the current country row equals the plan, including own cost ed
   const uk = E.projectChild(D, Object.assign({}, child, { country: 'UK', overrides: {} }), fam, a);
   assert.ok(close(rows[1].totalCost, uk.summary.totalCost));
 });
+
+test('families already living in Qatar or the UAE need no student visa there; others do', () => {
+  for (const c of ['Qatar', 'United Arab Emirates']) {
+    const resident = E.resolveCosts(D, { country: c, qualification: 'Engineering', overrides: {} }, { nationality: 'Pakistan', residence: c });
+    assert.equal(resident.items.visaApplication.amount, 0, c + ' resident');
+    assert.equal(resident.items.visaApplication.status, 'notNeeded', c + ' resident');
+    const abroad = E.resolveCosts(D, { country: c, qualification: 'Engineering', overrides: {} }, { nationality: 'Pakistan', residence: 'Pakistan' });
+    assert.ok(abroad.items.visaApplication.amount > 0, c + ' from abroad');
+  }
+  // the rule only applies where the dataset says so: living in the UK does not remove the UK student visa
+  const uk = E.resolveCosts(D, { country: 'UK', qualification: 'Law', overrides: {} }, { nationality: 'Pakistan', residence: 'UK' });
+  assert.ok(uk.items.visaApplication.amount > 0);
+});
+
+test('new countries: fee status, currency and citizens\' free public tuition', () => {
+  const fs = (c, n) => E.feeStatusFor(D, c, n);
+  assert.equal(fs('Ireland', 'UK'), 'domestic');
+  assert.equal(fs('Ireland', 'Pakistan'), 'international');
+  assert.equal(fs('Singapore', 'Singapore'), 'domestic');
+  const qa = E.resolveCosts(D, { country: 'Qatar', qualification: 'Engineering', overrides: {} }, { nationality: 'Qatar', residence: 'Qatar' });
+  assert.equal(qa.items.tuition.amount, 0);
+  assert.equal(qa.currency, 'QAR');
+  const sg = E.resolveCosts(D, { country: 'Singapore', qualification: 'Computer Science', overrides: {} }, { nationality: 'India', residence: 'India' });
+  assert.equal(sg.items.tuition.status, 'verified');
+  assert.equal(sg.currency, 'SGD');
+});

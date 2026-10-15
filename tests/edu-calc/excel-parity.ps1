@@ -51,7 +51,7 @@ try {
       $years += [ordered]@{ opening = $dash.Range("D$r").Value2; saving = $dash.Range("E$r").Value2; growth = $dash.Range("F$r").Value2
                             expense = $dash.Range("G$r").Value2; closing = $dash.Range("H$r").Value2; studying = $dash.Range("C$r").Text } }
     $kids = @(); for ($i = 0; $i -lt $f.numChildren; $i++) { $r = 12 + $i; $kids += [ordered]@{ total = $dash.Range("G$r").Value2; message = $dash.Range("H$r").Text } }
-    $compare = @(); for ($r = 9; $r -le 14; $r++) { $compare += [ordered]@{ country = $cmp.Range("B$r").Text; total = $cmp.Range("C$r").Value2; note = $cmp.Range("D$r").Text; current = $cmp.Range("E$r").Text } }
+    $compare = @(); for ($r = 9; $cmp.Range("B$r").Text -ne ""; $r++) { $compare += [ordered]@{ country = $cmp.Range("B$r").Text; total = $cmp.Range("C$r").Value2; note = $cmp.Range("D$r").Text; current = $cmp.Range("E$r").Text } }
     $results += [ordered]@{ name = $s.name; currency = $in.Range('D7').Text; total = $dash.Range('C4').Value2; saving = $dash.Range('C5').Value2
                             lump = $dash.Range('C6').Value2; planYears = $h; children = $kids; years = $years; compare = $compare
                             addsUp = $dash.Range('B95').Text }

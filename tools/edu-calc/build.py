@@ -328,6 +328,11 @@ def build_xlsx(d):
     name("Ctry_Name", S_LISTS, f"$G$2:$G${1 + nC}")
     name("Ctry_Ccy", S_LISTS, f"$H$2:$H${1 + nC}")
     name("Ctry_LInf", S_LISTS, f"$I$2:$I${1 + nC}")
+    res_no_visa = [v["country"] for v in d.get("visas", []) if v.get("residentsNoVisa")] or ["(none)"]
+    ws_lists["K1"] = "Residents need no student visa"
+    for i, v in enumerate(res_no_visa):
+        ws_lists.cell(row=2 + i, column=11, value=v)
+    name("ResNoVisa", S_LISTS, f"$K$2:$K${1 + len(res_no_visa)}")
     list_countries = f"{q(S_LISTS)}!$A$2:$A${1 + nC}"
     list_quals = f"{q(S_LISTS)}!$B$2:$B${1 + len(quals)}"
     list_places = f"{q(S_LISTS)}!$C$2:$C${1 + len(places)}"
@@ -686,9 +691,10 @@ def build_xlsx(d):
                 base = f"=IF({lrow}=0,PlanYear,INDEX(Liv_{k}_Base,{lrow}))"
                 st = f'=IF({lrow}=0,"missing",INDEX(Liv_{k}_Status,{lrow}))'
             elif k == "visaApplication":
-                res = f"=IF({vrow}=0,0,{conv(f'INDEX(VisaAmt,{vrow})', f'INDEX(VisaCcy,{vrow})')})"
-                base = f"=IF({vrow}=0,PlanYear,INDEX(VisaBase,{vrow}))"
-                st = f'=IF({vrow}=0,"missing",INDEX(VisaStatus,{vrow}))'
+                resident = f'AND({b("Fee status")}<>"domestic",Residence={b("Education country")},COUNTIF(ResNoVisa,{b("Education country")})>0)'
+                res = f"=IF(OR({vrow}=0,{resident}),0,{conv(f'INDEX(VisaAmt,{vrow})', f'INDEX(VisaCcy,{vrow})')})"
+                base = f"=IF(OR({vrow}=0,{resident}),PlanYear,INDEX(VisaBase,{vrow}))"
+                st = f'=IF({resident},"notNeeded",IF({vrow}=0,"missing",INDEX(VisaStatus,{vrow})))'
             else:  # travelRelocation
                 res = f"=IF({trow}=0,0,{conv(f'INDEX(TravAmt,{trow})', f'INDEX(TravCcy,{trow})')})"
                 base = f"=IF({trow}=0,PlanYear,INDEX(TravBase,{trow}))"
@@ -949,7 +955,7 @@ def build_xlsx(d):
 
     ws = ws_cmp
     ws.column_dimensions["A"].width = 2
-    for c, w in {"B": 18, "C": 20, "D": 54, "E": 16}.items():
+    for c, w in {"B": 24, "C": 20, "D": 54, "E": 16}.items():
         ws.column_dimensions[c].width = w
     put(ws, "B1", "Compare countries", TITLE)
     put(ws, "B2", '="The same child and qualification in each country, in "&RepCcy&". Choose the child on the Inputs sheet (Compare countries for child number)."', MUTED)
@@ -971,12 +977,13 @@ def build_xlsx(d):
         put(ws, f"D{r}", f'=IF({ch("ok")}<>1,"",IF(AND(NOT({is_cur}),{q(S_CC)}!{o["ok"]}<>1),{q(S_CC)}!{o["msg"]},'
                          f'IF({st}="estimated","Estimate — no published fee for this course",IF({hm}=1,"Some costs have no figure yet",""))))', MUTED)
         put(ws, f"E{r}", f'=IF(AND({ch("ok")}=1,{is_cur}),"Current plan","")', BOLD)
-    put(ws, "B16", "Each total covers the full course in that country (its usual length), at future prices, after your scholarship / "
+    note_r = 9 + len(countries) + 1
+    put(ws, f"B{note_r}", "Each total covers the full course in that country (its usual length), at future prices, after your scholarship / "
                    "part-time-work percentage. The current plan's row is your plan exactly. For other countries your own fee and "
                    "living-cost increases are used, but your own cost figures are not carried over, because they are in another "
                    "country's currency.", MUTED, wrap=True)
-    ws.merge_cells("B16:E16")
-    ws.row_dimensions[16].height = 52
+    ws.merge_cells(f"B{note_r}:E{note_r}")
+    ws.row_dimensions[note_r].height = 52
 
     # ---------------- Start Here ----------------
     ws = ws_start
@@ -989,7 +996,7 @@ def build_xlsx(d):
         ("How to use", H2),
         ("1. Go to the Inputs sheet and fill in the yellow cells: your family details and, for each child, age, education country and qualification.", None),
         ("2. Open the Dashboard: total education fund required, required yearly savings, amount needed now, each child, cost breakdown and the year-by-year plan.", None),
-        ("3. Compare Countries shows the same course in all six study countries.", None),
+        ("3. Compare Countries shows the same course in all 11 study countries.", None),
         ("4. Each child's sheet shows every cost line with its status (Published figure / Estimated — please review / Not needed / Your figure) and the full calculation.", None),
         ("5. To use your own figures, type them in the 'Your own cost figures' rows on the Inputs sheet (today's prices, education country's currency).", None),
         ("", None),

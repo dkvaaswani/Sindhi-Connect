@@ -215,12 +215,17 @@
     return p ? p.region : 'other';
   }
 
-  // Student visa for the destination; none when the child is a domestic national.
-  function visaFor(data, country, nationality, feeStatus) {
+  // Student visa for the destination; none when the child is a domestic national, or (where the dataset says so)
+  // when the family already lives in the education country, so the child keeps the family residence visa.
+  function visaFor(data, country, nationality, feeStatus, residence) {
     const v = (data.visas || []).find((x) => x.country === country);
     if (feeStatus === 'domestic') {
       return { amount: 0, currency: v ? v.currency : 'USD', status: 'notNeeded', baseYear: data.planStartYear,
         note: 'No student visa needed for this nationality.', sourceUrl: '' };
+    }
+    if (v && v.residentsNoVisa && residence && residence === country) {
+      return { amount: 0, currency: v.currency, status: 'notNeeded', baseYear: data.planStartYear,
+        note: 'Your family lives in ' + country + ', so the child usually keeps the family residence visa while studying.', sourceUrl: '' };
     }
     if (!v) return { amount: 0, currency: 'USD', status: 'missing', baseYear: data.planStartYear, note: 'No visa information yet.', sourceUrl: '' };
     const special = (v.byNationality || []).find((x) => x.nationality === nationality);
@@ -289,7 +294,7 @@
           baseYear: it.year || living.year || data.planStartYear }
         : { amount: 0, status: 'missing', note: 'No figure yet — please enter your own estimate.', sources: [], baseYear: data.planStartYear };
     });
-    const visa = visaFor(data, child.country, family.nationality, feeStatus);
+    const visa = visaFor(data, child.country, family.nationality, feeStatus, family.residence);
     items.visaApplication = { amount: conv(visa.amount, visa.currency), status: visa.status, note: visa.note,
       sources: visa.sourceUrl ? [{ label: 'Official visa fees', url: visa.sourceUrl, status: visa.status }] : [], baseYear: visa.baseYear };
     const trav = travelFor(data, child.country, family.residence);

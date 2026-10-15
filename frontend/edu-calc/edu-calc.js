@@ -28,7 +28,7 @@
     otherFees: 'Compulsory university charges not already in tuition, such as registration, exam, laboratory, student-service, technology and course-specific fees.',
     preOtherFees: 'Compulsory university charges not already in tuition, such as registration, exam, laboratory, student-service, technology and course-specific fees.',
     healthInsurance: 'Health cover the student must have — for example the UK health surcharge, Australia\'s OSHC or German student health insurance.',
-    visaApplication: 'Student visa and related government charges. Not needed when the child studies in their own country.',
+    visaApplication: 'Student visa and related government charges. Not needed when the child studies in their own country, or in Qatar or the UAE when the family already lives there.',
     travelRelocation: 'One trip to start the course and settling in. Day-to-day travel is under Local transport, so it is not counted twice.',
     admission: 'One-time admission, application or registration charges (refundable deposits are not included).'
   };
